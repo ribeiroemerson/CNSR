@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conecta Nova Santa Rita - Portal da Cidade</title>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- CSS Personalizado -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- NAVEGAÇÃO SUPERIOR -->
+  <header class="header">
+    <div class="header-container">
+      <div class="logo-area">
+        <i class="fa-solid fa-city logo-icon"></i>
+        <div>
+          <h1 class="logo-title">Conecta</h1>
+          <p class="logo-subtitle">Nova Santa Rita</p>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#inicio" class="nav-link active"><i class="fa-solid fa-house"></i> Início</a>
+        <a href="#servicos" class="nav-link"><i class="fa-solid fa-hand-holding-hand"></i> Serviços</a>
+        <a href="#chamados" class="nav-link"><i class="fa-solid fa-bullhorn"></i> Solicitações</a>
+        <a href="#noticias" class="nav-link"><i class="fa-solid fa-newspaper"></i> Notícias</a>
+        <a href="#eventos" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Eventos</a>
+      </nav>
+
+      <div class="user-actions">
+        <button id="btnConsultarProtocolo" class="btn btn-outline">
+          <i class="fa-solid fa-magnifying-glass"></i> Consultar Chamado
+        </button>
+      <button id="btnNovoChamado" class="btn btn-primary">
+  <i class="fa-solid fa-plus"></i> Nova Solicitação
+</button>
+      </div>
+  </header>
+
+  <!-- SEÇÃO HERO -->
+  <section id="inicio" class="hero-section">
+    <div class="hero-content">
+      <span class="hero-badge">Plataforma Digital da Cidadania</span>
+      <h2 class="hero-title">Sua cidade mais conectada, transparente e participativa</h2>
+      <p class="hero-subtitle">
+        Abra chamados para iluminação pública, reparo de vias, coleta de lixo, acompanhe andamentos e fique por dentro das novidades da nossa cidade.
+      </p>
+      <div class="hero-buttons">
+        <a href="#chamados" class="btn btn-primary btn-lg"><i class="fa-solid fa-file-pen"></i> Abrir Solicitação</a>
+        <a href="#servicos" class="btn btn-secondary btn-lg"><i class="fa-solid fa-list-check"></i> Ver Serviços</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTAINER PRINCIPAL -->
+  <main class="main-container">
+
+    <!-- ESTATÍSTICAS DA CIDADE -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon bg-blue"><i class="fa-solid fa-clipboard-check"></i></div>
+        <div>
+          <h3 class="stat-value" id="totalChamados">1.428</h3>
+          <p class="stat-label">Solicitações Atendidas</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon bg-green"><i class="fa-solid fa-hourglass-half"></i></div>
+        <div>
+          <h3 class="stat-value">94%</h3>
+          <p class="stat-label">Resolução no Prazo</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon bg-yellow"><i class="fa-solid fa-users"></i></div>
+        <div>
+          <h3 class="stat-value">12.500+</h3>
+          <p class="stat-label">Cidadãos Cadastrados</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon bg-purple"><i class="fa-solid fa-building-columns"></i></div>
+        <div>
+          <h3 class="stat-value">8</h3>
+          <p class="stat-label">Secretarias Integradas</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATÁLOGO DE SERVIÇOS -->
+    <section id="servicos" class="section-block">
+      <div class="section-header">
+        <h2 class="section-title">Serviços Municipais</h2>
+        <p class="section-description">Selecione uma categoria para registrar uma demanda ou buscar orientações</p>
+      </div>
+
+      <div class="services-grid">
+        <div class="service-card" onclick="selecionarCategoria('Iluminação Pública')">
+          <div class="service-icon"><i class="fa-solid fa-lightbulb"></i></div>
+          <h3 class="service-name">Iluminação Pública</h3>
+          <p class="service-desc">Troca de lâmpadas queimadas, postes danificados e expansão de rede.</p>
+        </div>
+
+        <div class="service-card" onclick="selecionarCategoria('Obras e Vias')">
+          <div class="service-icon"><i class="fa-solid fa-road"></i></div>
+          <h3 class="service-name">Obras e Pavimentação</h3>
+          <p class="service-desc">Tapa-buracos, recapeamento, calçamentos e reparo de manilhas.</p>
+        </div>
+
+        <div class="service-card" onclick="selecionarCategoria('Limpeza Urbana')">
+          <div class="service-icon"><i class="fa-solid fa-trash-can"></i></div>
+          <h3 class="service-name">Limpeza e Coleta</h3>
+          <p class="service-desc">Coleta de lixo, capina de lotes públicos e remoção de entulhos.</p>
+        </div>
+
+        <div class="service-card" onclick="selecionarCategoria('Saneamento e Água')">
+          <div class="service-icon"><i class="fa-solid fa-droplet"></i></div>
+          <h3 class="service-name">Saneamento e Água</h3>
+          <p class="service-desc">Vazamentos na rede, esgoto a céu aberto e abastecimento.</p>
+        </div>
+
+        <div class="service-card" onclick="selecionarCategoria('Meio Ambiente')">
+          <div class="service-icon"><i class="fa-solid fa-tree"></i></div>
+          <h3 class="service-name">Meio Ambiente</h3>
+          <p class="service-desc">Poda de árvores, denúncia de descarte irregular e arborização.</p>
+        </div>
+
+        <div class="service-card" onclick="selecionarCategoria('Trânsito e Mobilidade')">
+          <div class="service-icon"><i class="fa-solid fa-traffic-light"></i></div>
+          <h3 class="service-name">Trânsito e Sinalização</h3>
+          <p class="service-desc">Manutenção de placas, pintura de faixas e lombadas.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FORMULÁRIO DE NOVA SOLICITAÇÃO -->
+    <section id="chamados" class="section-block">
+      <div class="card-form">
+        <div class="form-header">
+          <h2><i class="fa-solid fa-pen-to-square"></i> Abrir Nova Solicitação</h2>
+          <p>Preencha os dados abaixo para enviar o chamado para a prefeitura.</p>
+        </div>
+
+        <form id="formNovoChamado" onsubmit="salvarChamado(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="nomeCidadao">Nome Completo *</label>
+              <input type="text" id="nomeCidadao" class="form-control" placeholder="Digite seu nome" required>
+            </div>
+
+            <div class="form-group">
+              <label for="cpfCidadao">CPF / Telefone *</label>
+              <input type="text" id="cpfCidadao" class="form-control" placeholder="000.000.000-00 ou (00) 00000-0000" required>
+            </div>
+
+            <div class="form-group">
+              <label for="categoriaChamado">Categoria do Serviço *</label>
+              <select id="categoriaChamado" class="form-control" required>
+                <option value="">Selecione uma categoria...</option>
+                <option value="Iluminação Pública">Iluminação Pública</option>
+                <option value="Obras e Vias">Obras e Pavimentação</option>
+                <option value="Limpeza Urbana">Limpeza Urbana e Coleta</option>
+                <option value="Saneamento e Água">Saneamento e Água</option>
+                <option value="Meio Ambiente">Meio Ambiente</option>
+                <option value="Trânsito e Mobilidade">Trânsito e Mobilidade</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="bairroChamado">Bairro / Localidade *</label>
+              <input type="text" id="bairroChamado" class="form-control" placeholder="Ex: Centro, Bairro Novo..." required>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="enderecoChamado">Endereço Completo / Ponto de Referência *</label>
+              <input type="text" id="enderecoChamado" class="form-control" placeholder="Rua, número e referência" required>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="descricaoChamado">Descrição Detalhada do Problema *</label>
+              <textarea id="descricaoChamado" rows="4" class="form-control" placeholder="Descreva o problema com o máximo de detalhes possível..." required></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="reset" class="btn btn-secondary">Limpar Formulário</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Registrar Chamado</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- LISTAGEM E CONSULTA DE CHAMADOS -->
+    <section class="section-block">
+      <div class="section-header-flex">
+        <div>
+          <h2 class="section-title">Acompanhamento de Solicitações</h2>
+          <p class="section-description">Consulte as demandas mais recentes registradas pela comunidade</p>
+        </div>
+        
+        <div class="search-box">
+          <input type="text" id="inputBuscaProtocolo" class="form-control" placeholder="Buscar por protocolo, bairro..." onkeyup="filtrarChamados()">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Protocolo</th>
+              <th>Solicitante</th>
+              <th>Categoria</th>
+              <th>Bairro</th>
+              <th>Data</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaChamadosBody">
+            <!-- Preenchido via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- NOTÍCIAS DA CIDADE -->
+    <section id="noticias" class="section-block">
+      <div class="section-header">
+        <h2 class="section-title">Notícias e Comunicados</h2>
+        <p class="section-description">Fique informado sobre as ações e obras da Prefeitura de Nova Santa Rita</p>
+      </div>
+
+      <div class="news-grid">
+        <article class="news-card">
+          <div class="news-badge">Obras</div>
+          <h3 class="news-title">Mutirão de pavimentação chega aos bairros da zona sul nesta semana</h3>
+          <p class="news-excerpt">Equipes de infraestrutura iniciam a aplicação de asfalto em mais de 10 ruas principais.</p>
+          <div class="news-footer">
+            <span><i class="fa-regular fa-clock"></i> Há 2 dias</span>
+            <button class="btn-text" onclick="abrirNoticia('Mutirão de pavimentação', 'Equipes de infraestrutura iniciam a aplicação de asfalto em mais de 10 ruas principais da zona sul. A previsão é concluir a primeira etapa até a próxima sexta-feira.')">Ler mais <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+        </article>
+
+        <article class="news-card">
+          <div class="news-badge bg-green">Saúde</div>
+          <h3 class="news-title">Campanha de Vacinação no Posto Central ganha horário estendido</h3>
+          <p class="news-excerpt">Unidade de saúde funcionará até às 20h para atender trabalhadores e famílias.</p>
+          <div class="news-footer">
+            <span><i class="fa-regular fa-clock"></i> Há 3 dias</span>
+            <button class="btn-text" onclick="abrirNoticia('Campanha de Vacinação', 'A Secretaria Municipal de Saúde informa que o Posto Central estará com atendimento estendido das 17h às 20h durante toda a semana para atualização da caderneta de vacinação.')">Ler mais <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+        </article>
+
+        <article class="news-card">
+          <div class="news-badge bg-purple">Educação</div>
+          <h3 class="news-title">Inscrições abertas para novos cursos técnicos de informática</h3>
+          <p class="news-excerpt">Parceria oferece 150 vagas gratuitas para jovens e adultos do município.</p>
+          <div class="news-footer">
+            <span><i class="fa-regular fa-clock"></i> Há 5 dias</span>
+            <button class="btn-text" onclick="abrirNoticia('Cursos Técnicos', 'Estão abertas as inscrições para os módulos de Informática e Automação Industrial. Garantia de qualificação profissional com certificação oficial.')">Ler mais <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- RODAPÉ -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="logo-area light">
+          <i class="fa-solid fa-city logo-icon"></i>
+          <div>
+            <h3 class="logo-title">Conecta</h3>
+            <p class="logo-subtitle">Nova Santa Rita</p>
+          </div>
+        </div>
+        <p class="footer-text">Projeto desenvolvido para modernizar o atendimento e a gestão de serviços municipais aos cidadãos.</p>
+      </div>
+
+      <div class="footer-col">
+        <h4 class="footer-heading">Desenvolvido por (Grupo 03)</h4>
+        <ul class="footer-list">
+          <li>Emerson Ribeiro da Silva</li>
+          <li>Geraldo Barbosa Coelho</li>
+          <li>Lucas José de Sousa</li>
+          <li>Ronaldo Mendes Rodrigues</li>
+          <li>Tales Renan de Sousa</li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4 class="footer-heading">Links do Projeto</h4>
+        <ul class="footer-list">
+          <li><a href="https://trello.com/invite/b/6a7ddce6e743543da70e71e7/ATTIba56ba6e8978436e613a97ada1b8d200A8FE6433/conecta-nova-santa-rita-iniciando-o-projeto" target="_blank"><i class="fa-brands fa-trello"></i> Quadro no Trello</a></li>
+          <li><a href="https://www.figma.com/design/FSHeRbMOjc6beKsWZS53U8/projeto-em-grupo?node-id=6-31&t=iMhwHJqBwSTg47ck-1" target="_blank"><i class="fa-brands fa-figma"></i> Protótipos no Figma</a></li>
+          <li><a href="https://drive.google.com/file/d/1IUzFm5hLqe7kSgPG5D7y5WZ975C2c5Cw/view" target="_blank"><i class="fa-solid fa-diagram-project"></i> Diagrama de Classe</a></li>
+          <li><a href="https://drive.google.com/file/d/1e8_2jKrnThFrw3iixEeKvH9U6Vfr6xn3/view" target="_blank"><i class="fa-solid fa-sitemap"></i> Diagrama de Casos de Uso</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 Conecta Nova Santa Rita. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- MODAL DE SUCESSO DO PROTOCOLO -->
+  <div id="modalSucesso" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-icon text-green"><i class="fa-solid fa-circle-check"></i></div>
+      <h3 class="modal-title">Solicitação Registrada!</h3>
+      <p class="modal-desc">Guarde seu número de protocolo para acompanhar o andamento do serviço:</p>
+      <div class="protocol-box" id="modalProtocoloNumero">NSR-2026-0000</div>
+      <button class="btn btn-primary btn-full" onclick="fecharModal('modalSucesso')">Entender e Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE NOTÍCIA -->
+  <div id="modalNoticia" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title" id="noticiaTitulo">Título</h3>
+      <p class="modal-desc" id="noticiaConteudo">Conteúdo...</p>
+      <button class="btn btn-secondary btn-full" onclick="fecharModal('modalNoticia')">Fechar</button>
+    </div>
+  </div>
+
+  <!-- JavaScript Personalizado -->
+  <script src="script.js"></script>
+</body>
+</html>
