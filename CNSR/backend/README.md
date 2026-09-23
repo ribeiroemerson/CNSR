@@ -42,16 +42,16 @@ Todas as respostas de erro seguem o formato `{ "mensagem": "..." }` (ou `{ "mens
 
 ## Deploy em produção (Render)
 
-O arquivo [render.yaml](render.yaml) descreve um Blueprint do Render que provisiona automaticamente:
+O Render exige que o Blueprint (`render.yaml`) fique na **raiz do repositório Git**. Como o backend vive na subpasta `CNSR/backend`, o arquivo está em [`../../render.yaml`](../../render.yaml) (raiz do repositório), com `rootDir: CNSR/backend` apontando para esta pasta. Ele provisiona automaticamente:
 
 - Um banco **PostgreSQL** gerenciado (`cnsr-db`).
 - Um serviço **Web** Node/Express com deploy contínuo a partir do GitHub (cada push na branch configurada gera um novo deploy).
 - As variáveis de ambiente de produção (`DATABASE_URL` vinda do banco, `JWT_SECRET` gerado automaticamente, `NODE_ENV=production`), sem nenhuma credencial commitada no repositório.
 
 Passos:
-1. Suba o projeto para um repositório no GitHub.
-2. No painel do Render, escolha **New > Blueprint** e selecione o repositório (ajuste o "Root Directory" para `backend`, se necessário).
-3. Revise os recursos detectados a partir do `render.yaml` e confirme a criação.
+1. Confirme que `render.yaml` está commitado na raiz do repositório e enviado (`git push`) para o GitHub.
+2. No painel do Render, escolha **New > Blueprint** e selecione o repositório.
+3. Revise os recursos detectados a partir do `render.yaml` (banco `cnsr-db` + serviço `cnsr-backend`) e confirme em **Apply**.
 4. Após o primeiro deploy, ajuste `CORS_ORIGIN` para o domínio real do front-end (em vez de `*`).
 
 ## Endpoints principais
