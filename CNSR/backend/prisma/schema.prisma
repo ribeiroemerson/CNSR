@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StatusChamado {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDO
+}
+
+// Cidadão que pode abrir uma ou mais solicitações (chamados)
+model Usuario {
+  id           Int       @id @default(autoincrement())
+  nome         String
+  cpf          String    @unique
+  email        String    @unique
+  telefone     String
+  dataCadastro DateTime  @default(now())
+  chamados     Chamado[]
+
+  @@map("usuarios")
+}
+
+// Administrador do sistema: gerencia chamados e publica notícias
+model Administrador {
+  id           Int       @id @default(autoincrement())
+  nomeCompleto String
+  email        String    @unique
+  usuario      String    @unique
+  senhaHash    String
+  dataCadastro DateTime  @default(now())
+  noticias     Noticia[]
+
+  @@map("administradores")
+}
+
+// Solicitação registrada por um cidadão (com ou sem cadastro prévio)
+model Chamado {
+  id         Int            @id @default(autoincrement())
+  protocolo  String         @unique
+  nome       String
+  telefone   String
+  categoria  String
+  bairro     String
+  endereco   String
+  descricao  String
+  status     StatusChamado  @default(PENDENTE)
+  criadoEm   DateTime       @default(now())
+
+  usuarioId  Int?
+  usuario    Usuario?       @relation(fields: [usuarioId], references: [id])
+
+  @@map("chamados")
+}
+
+// Notícia publicada por um administrador em um dos painéis (Obras, Saúde, Educação)
+model Noticia {
+  id              Int            @id @default(autoincrement())
+  categoria       String
+  titulo          String
+  resumo          String
+  conteudo        String
+  urlImagem       String?
+  criadoEm        DateTime       @default(now())
+
+  administradorId Int
+  administrador   Administrador  @relation(fields: [administradorId], references: [id])
+
+  @@map("noticias")
+}

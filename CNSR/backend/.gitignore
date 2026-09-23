@@ -1,0 +1,23 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente
+.env
+.env.*.local
+
+# Prisma (caso seja usado SQLite localmente em vez de Postgres)
+prisma/dev.db
+prisma/dev.db-journal
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Cobertura de testes
+coverage/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db

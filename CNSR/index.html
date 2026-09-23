@@ -39,6 +39,13 @@
       <button id="btnNovoChamado" class="btn btn-primary">
   <i class="fa-solid fa-plus"></i> Nova Solicitação
 </button>
+        <button id="btnAreaAdmin" class="btn btn-outline">
+          <i class="fa-solid fa-user-shield"></i> Administrador
+        </button>
+        <div id="adminSessaoBadge" class="admin-session-badge hidden">
+          <span id="adminSessaoNome"></span>
+          <button type="button" class="btn-text" onclick="sairAdministrador()">Sair</button>
+        </div>
       </div>
   </header>
 
@@ -65,7 +72,7 @@
       <div class="stat-card">
         <div class="stat-icon bg-blue"><i class="fa-solid fa-clipboard-check"></i></div>
         <div>
-          <h3 class="stat-value" id="totalChamados">1.428</h3>
+          <h3 class="stat-value" id="totalChamados">0</h3>
           <p class="stat-label">Solicitações Atendidas</p>
         </div>
       </div>
@@ -73,7 +80,7 @@
       <div class="stat-card">
         <div class="stat-icon bg-green"><i class="fa-solid fa-hourglass-half"></i></div>
         <div>
-          <h3 class="stat-value">94%</h3>
+          <h3 class="stat-value" id="taxaResolucao">0%</h3>
           <p class="stat-label">Resolução no Prazo</p>
         </div>
       </div>
@@ -81,7 +88,7 @@
       <div class="stat-card">
         <div class="stat-icon bg-yellow"><i class="fa-solid fa-users"></i></div>
         <div>
-          <h3 class="stat-value">12.500+</h3>
+          <h3 class="stat-value" id="totalCidadaos">0</h3>
           <p class="stat-label">Cidadãos Cadastrados</p>
         </div>
       </div>
@@ -89,7 +96,7 @@
       <div class="stat-card">
         <div class="stat-icon bg-purple"><i class="fa-solid fa-building-columns"></i></div>
         <div>
-          <h3 class="stat-value">8</h3>
+          <h3 class="stat-value" id="totalSecretarias">0</h3>
           <p class="stat-label">Secretarias Integradas</p>
         </div>
       </div>
@@ -157,8 +164,8 @@
             </div>
 
             <div class="form-group">
-              <label for="cpfCidadao">CPF / Telefone *</label>
-              <input type="text" id="cpfCidadao" class="form-control" placeholder="000.000.000-00 ou (00) 00000-0000" required>
+              <label for="telefoneCidadao">Telefone *</label>
+              <input type="text" id="telefoneCidadao" class="form-control" placeholder="(00) 00000-0000" required>
             </div>
 
             <div class="form-group">
@@ -205,10 +212,18 @@
           <h2 class="section-title">Acompanhamento de Solicitações</h2>
           <p class="section-description">Consulte as demandas mais recentes registradas pela comunidade</p>
         </div>
-        
-        <div class="search-box">
-          <input type="text" id="inputBuscaProtocolo" class="form-control" placeholder="Buscar por protocolo, bairro..." onkeyup="filtrarChamados()">
-          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+
+        <div class="table-toolbar">
+          <div class="search-box">
+            <input type="text" id="inputBuscaProtocolo" class="form-control" placeholder="Buscar por protocolo, bairro..." onkeyup="filtrarChamados()">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          </div>
+          <button type="button" class="btn btn-outline" onclick="imprimirRelatorioChamados()">
+            <i class="fa-solid fa-print"></i> Imprimir
+          </button>
+          <button type="button" class="btn btn-outline" onclick="gerarRelatorioChamadosPDF()">
+            <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+          </button>
         </div>
       </div>
 
@@ -234,41 +249,18 @@
 
     <!-- NOTÍCIAS DA CIDADE -->
     <section id="noticias" class="section-block">
-      <div class="section-header">
-        <h2 class="section-title">Notícias e Comunicados</h2>
-        <p class="section-description">Fique informado sobre as ações e obras da Prefeitura de Nova Santa Rita</p>
+      <div class="section-header-flex">
+        <div>
+          <h2 class="section-title">Notícias e Comunicados</h2>
+          <p class="section-description">Fique informado sobre as ações e obras da Prefeitura de Nova Santa Rita</p>
+        </div>
+        <button id="btnNovaNoticia" class="btn btn-primary hidden" onclick="abrirModalNoticiaForm()">
+          <i class="fa-solid fa-plus"></i> Nova Notícia
+        </button>
       </div>
 
-      <div class="news-grid">
-        <article class="news-card">
-          <div class="news-badge">Obras</div>
-          <h3 class="news-title">Mutirão de pavimentação chega aos bairros da zona sul nesta semana</h3>
-          <p class="news-excerpt">Equipes de infraestrutura iniciam a aplicação de asfalto em mais de 10 ruas principais.</p>
-          <div class="news-footer">
-            <span><i class="fa-regular fa-clock"></i> Há 2 dias</span>
-            <button class="btn-text" onclick="abrirNoticia('Mutirão de pavimentação', 'Equipes de infraestrutura iniciam a aplicação de asfalto em mais de 10 ruas principais da zona sul. A previsão é concluir a primeira etapa até a próxima sexta-feira.')">Ler mais <i class="fa-solid fa-arrow-right"></i></button>
-          </div>
-        </article>
-
-        <article class="news-card">
-          <div class="news-badge bg-green">Saúde</div>
-          <h3 class="news-title">Campanha de Vacinação no Posto Central ganha horário estendido</h3>
-          <p class="news-excerpt">Unidade de saúde funcionará até às 20h para atender trabalhadores e famílias.</p>
-          <div class="news-footer">
-            <span><i class="fa-regular fa-clock"></i> Há 3 dias</span>
-            <button class="btn-text" onclick="abrirNoticia('Campanha de Vacinação', 'A Secretaria Municipal de Saúde informa que o Posto Central estará com atendimento estendido das 17h às 20h durante toda a semana para atualização da caderneta de vacinação.')">Ler mais <i class="fa-solid fa-arrow-right"></i></button>
-          </div>
-        </article>
-
-        <article class="news-card">
-          <div class="news-badge bg-purple">Educação</div>
-          <h3 class="news-title">Inscrições abertas para novos cursos técnicos de informática</h3>
-          <p class="news-excerpt">Parceria oferece 150 vagas gratuitas para jovens e adultos do município.</p>
-          <div class="news-footer">
-            <span><i class="fa-regular fa-clock"></i> Há 5 dias</span>
-            <button class="btn-text" onclick="abrirNoticia('Cursos Técnicos', 'Estão abertas as inscrições para os módulos de Informática e Automação Industrial. Garantia de qualificação profissional com certificação oficial.')">Ler mais <i class="fa-solid fa-arrow-right"></i></button>
-          </div>
-        </article>
+      <div class="news-grid" id="newsGridContainer">
+        <!-- Preenchido via JavaScript -->
       </div>
     </section>
 
@@ -322,7 +314,16 @@
       <h3 class="modal-title">Solicitação Registrada!</h3>
       <p class="modal-desc">Guarde seu número de protocolo para acompanhar o andamento do serviço:</p>
       <div class="protocol-box" id="modalProtocoloNumero">NSR-2026-0000</div>
-      <button class="btn btn-primary btn-full" onclick="fecharModal('modalSucesso')">Entender e Fechar</button>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline btn-full" onclick="imprimirComprovante()">
+          <i class="fa-solid fa-print"></i> Imprimir Comprovante
+        </button>
+        <button type="button" class="btn btn-secondary btn-full" onclick="salvarComprovante()">
+          <i class="fa-solid fa-download"></i> Salvar Comprovante
+        </button>
+        <button class="btn btn-primary btn-full" onclick="fecharModal('modalSucesso')">Entender e Fechar</button>
+      </div>
     </div>
   </div>
 
@@ -335,7 +336,136 @@
     </div>
   </div>
 
+  <!-- MODAL DE CRIAÇÃO/EDIÇÃO DE NOTÍCIA (ADMINISTRADOR) -->
+  <div id="modalNoticiaForm" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title" id="tituloModalNoticiaForm">Nova Notícia</h3>
+      <p class="modal-desc">Preencha os dados abaixo para publicar no painel de notícias.</p>
+
+      <form id="formNoticia" onsubmit="salvarNoticia(event)">
+        <input type="hidden" id="noticiaIdForm">
+        <div class="form-group full-width">
+          <label for="noticiaCategoriaForm">Painel</label>
+          <select id="noticiaCategoriaForm" class="form-control" required>
+            <option value="Obras">Obras</option>
+            <option value="Saúde">Saúde</option>
+            <option value="Educação">Educação</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label for="noticiaTituloForm">Título</label>
+          <input type="text" id="noticiaTituloForm" class="form-control" placeholder="Título da notícia" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="noticiaResumoForm">Resumo (exibido no card)</label>
+          <input type="text" id="noticiaResumoForm" class="form-control" placeholder="Resumo curto da notícia" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="noticiaConteudoForm">Conteúdo Completo</label>
+          <textarea id="noticiaConteudoForm" rows="4" class="form-control" placeholder="Texto completo exibido ao clicar em 'Ler mais'" required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="fecharModal('modalNoticiaForm')">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Salvar Notícia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE LOGIN DO ADMINISTRADOR -->
+  <div id="modalAdminLogin" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-icon"><i class="fa-solid fa-user-shield"></i></div>
+      <h3 class="modal-title">Acesso Administrativo</h3>
+      <p class="modal-desc">Entre com seu usuário e senha para gerenciar as solicitações.</p>
+
+      <form id="formAdminLogin" onsubmit="autenticarAdministrador(event)">
+        <div class="form-group full-width">
+          <label for="loginUsuarioAdmin">Usuário</label>
+          <input type="text" id="loginUsuarioAdmin" class="form-control" placeholder="Digite seu usuário" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="loginSenhaAdmin">Senha</label>
+          <input type="password" id="loginSenhaAdmin" class="form-control" placeholder="Digite sua senha" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="fecharModal('modalAdminLogin')">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+        </div>
+      </form>
+
+      <p class="modal-switch-text">
+        Não tem cadastro? <a href="#" onclick="trocarModalAdmin(event, 'modalAdminLogin', 'modalAdminCadastro')">Cadastre-se</a><br>
+        Esqueceu a senha? <a href="#" onclick="trocarModalAdmin(event, 'modalAdminLogin', 'modalAdminRecuperar')">Recuperar senha</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL DE CADASTRO DO ADMINISTRADOR -->
+  <div id="modalAdminCadastro" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title">Cadastro de Administrador</h3>
+      <p class="modal-desc">Preencha os dados abaixo para criar seu acesso administrativo.</p>
+
+      <form id="formAdminCadastro" onsubmit="cadastrarAdministrador(event)">
+        <div class="form-group full-width">
+          <label for="nomeAdmin">Nome Completo</label>
+          <input type="text" id="nomeAdmin" class="form-control" placeholder="Digite seu nome completo" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="emailAdmin">E-mail</label>
+          <input type="email" id="emailAdmin" class="form-control" placeholder="seuemail@exemplo.com" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="usuarioAdmin">Usuário</label>
+          <input type="text" id="usuarioAdmin" class="form-control" placeholder="Escolha um nome de usuário" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="senhaAdmin">Senha</label>
+          <input type="password" id="senhaAdmin" class="form-control" placeholder="Crie uma senha (mín. 6 caracteres)" required minlength="6">
+        </div>
+        <div class="form-group full-width">
+          <label for="confirmarSenhaAdmin">Confirmar Senha</label>
+          <input type="password" id="confirmarSenhaAdmin" class="form-control" placeholder="Repita a senha" required minlength="6">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="fecharModal('modalAdminCadastro')">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Cadastrar</button>
+        </div>
+      </form>
+
+      <p class="modal-switch-text">
+        Já possui cadastro? <a href="#" onclick="trocarModalAdmin(event, 'modalAdminCadastro', 'modalAdminLogin')">Fazer login</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL DE RECUPERAÇÃO DE SENHA DO ADMINISTRADOR -->
+  <div id="modalAdminRecuperar" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title">Recuperar Senha</h3>
+      <p class="modal-desc">Informe o e-mail cadastrado para gerar uma nova senha de acesso.</p>
+
+      <form id="formAdminRecuperar" onsubmit="recuperarSenhaAdministrador(event)">
+        <div class="form-group full-width">
+          <label for="emailRecuperarAdmin">E-mail cadastrado</label>
+          <input type="email" id="emailRecuperarAdmin" class="form-control" placeholder="seuemail@exemplo.com" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="fecharModal('modalAdminRecuperar')">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Enviar</button>
+        </div>
+      </form>
+
+      <p class="modal-switch-text">
+        Lembrou a senha? <a href="#" onclick="trocarModalAdmin(event, 'modalAdminRecuperar', 'modalAdminLogin')">Voltar ao login</a>
+      </p>
+    </div>
+  </div>
+
   <!-- JavaScript Personalizado -->
-  <script src="script.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="js/script.js"></script>
 </body>
 </html>

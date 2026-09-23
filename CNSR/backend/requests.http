@@ -1,0 +1,90 @@
+@baseUrl = http://localhost:3333/api
+
+### Cadastrar cidadão
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Maria das Dores",
+  "cpf": "555.666.777-88",
+  "email": "maria@example.com",
+  "telefone": "(86) 99999-1111"
+}
+
+### Cadastrar administrador
+POST {{baseUrl}}/administradores
+Content-Type: application/json
+
+{
+  "nomeCompleto": "Admin Nova Santa Rita",
+  "email": "admin@nsr.gov.br",
+  "usuario": "admin.nsr",
+  "senha": "senha123",
+  "confirmarSenha": "senha123"
+}
+
+### Login do administrador
+# @name login
+POST {{baseUrl}}/administradores/login
+Content-Type: application/json
+
+{
+  "usuario": "admin.nsr",
+  "senha": "senha123"
+}
+
+### Recuperar senha do administrador
+POST {{baseUrl}}/administradores/recuperar-senha
+Content-Type: application/json
+
+{
+  "email": "admin@nsr.gov.br"
+}
+
+### Criar chamado (público)
+POST {{baseUrl}}/chamados
+Content-Type: application/json
+
+{
+  "nome": "João Pedro Alves",
+  "telefone": "(86) 98888-2222",
+  "categoria": "Iluminação Pública",
+  "bairro": "Centro",
+  "endereco": "Rua Principal, 100",
+  "descricao": "Lâmpada queimada na rua principal."
+}
+
+### Listar chamados
+GET {{baseUrl}}/chamados
+
+### Consultar chamado por protocolo
+GET {{baseUrl}}/chamados/protocolo/NSR-2026-1234
+
+### Alterar status do chamado (requer token de administrador)
+PATCH {{baseUrl}}/chamados/1/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "status": "EM_ANDAMENTO"
+}
+
+### Excluir chamado (requer token de administrador)
+DELETE {{baseUrl}}/chamados/1
+Authorization: Bearer {{login.response.body.token}}
+
+### Criar notícia (requer token de administrador)
+POST {{baseUrl}}/noticias
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "categoria": "Obras",
+  "titulo": "Mutirão de pavimentação chega à zona sul",
+  "resumo": "Equipes iniciam recapeamento em mais de 10 ruas.",
+  "conteudo": "Texto completo da notícia sobre o mutirão de pavimentação.",
+  "urlImagem": "https://exemplo.com/imagem.jpg"
+}
+
+### Listar notícias
+GET {{baseUrl}}/noticias
