@@ -18,7 +18,7 @@ app.use(express.json());
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api", rotas);
 
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({ mensagem: "Rota não encontrada." });
 });
 
