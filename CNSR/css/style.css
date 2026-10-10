@@ -430,6 +430,37 @@ body {
   color: var(--text-muted);
 }
 
+.description-dropdown {
+  min-width: 150px;
+}
+
+.description-dropdown summary {
+  color: var(--primary-color);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.description-dropdown p {
+  max-width: 320px;
+  margin-top: 0.5rem;
+  color: var(--text-main);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.description-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.description-actions .btn {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8rem;
+}
+
 /* BADGES DE STATUS */
 .status-badge {
   padding: 0.25rem 0.75rem;

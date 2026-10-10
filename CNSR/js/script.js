@@ -353,16 +353,22 @@ function atualizarInterfaceAdmin() {
   const badgeSessao = document.getElementById("adminSessaoBadge");
   const nomeSessao = document.getElementById("adminSessaoNome");
   const btnNovaNoticia = document.getElementById("btnNovaNoticia");
+  const botoesRelatorio = [
+    document.getElementById("btnImprimirRelatorioChamados"),
+    document.getElementById("btnBaixarRelatorioChamados")
+  ];
 
   if (administradorLogado() && perfil) {
     if (btnAreaAdmin) btnAreaAdmin.classList.add("hidden");
     if (badgeSessao) badgeSessao.classList.remove("hidden");
     if (nomeSessao) nomeSessao.textContent = `Olá, ${perfil.nomeCompleto.split(" ")[0]}`;
     if (btnNovaNoticia) btnNovaNoticia.classList.remove("hidden");
+    botoesRelatorio.forEach(botao => botao?.classList.remove("hidden"));
   } else {
     if (btnAreaAdmin) btnAreaAdmin.classList.remove("hidden");
     if (badgeSessao) badgeSessao.classList.add("hidden");
     if (btnNovaNoticia) btnNovaNoticia.classList.add("hidden");
+    botoesRelatorio.forEach(botao => botao?.classList.add("hidden"));
   }
 }
 
@@ -376,6 +382,16 @@ const STATUS_INFO = {
   CONCLUIDO: { label: "Concluído", classe: "status-concluido" }
 };
 
+function escaparHtml(texto) {
+  return String(texto).replace(/[&<>"']/g, caractere => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[caractere]);
+}
+
 // Desenha a lista de chamados na tabela de acompanhamento
 function renderizarTabelaChamados(lista) {
   const corpoTabela = document.getElementById("tabelaChamadosBody");
@@ -384,7 +400,7 @@ function renderizarTabelaChamados(lista) {
   const chamados = lista || chamadosCache;
 
   if (chamados.length === 0) {
-    corpoTabela.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhuma solicitação encontrada.</td></tr>`;
+    corpoTabela.innerHTML = `<tr><td colspan="8" style="text-align:center;">Nenhuma solicitação encontrada.</td></tr>`;
     return;
   }
 
@@ -406,11 +422,29 @@ function renderizarTabelaChamados(lista) {
         </button>`
       : `<span title="Somente administradores podem excluir">&mdash;</span>`;
 
+    const descricao = escaparHtml(chamado.descricao || "Descrição não informada.");
+    const acoesDocumento = `
+      <div class="description-actions">
+        ${logado ? `<button type="button" class="btn btn-outline btn-sm" onclick="imprimirChamado(${chamado.id})">
+          <i class="fa-solid fa-print"></i> Imprimir
+        </button>` : ""}
+        <button type="button" class="btn btn-outline btn-sm" onclick="gerarChamadoPDF(${chamado.id})">
+          <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+        </button>
+      </div>`;
+
     return `
       <tr>
         <td>${chamado.protocolo}</td>
         <td>${chamado.nome}</td>
         <td>${chamado.categoria}</td>
+        <td>
+          <details class="description-dropdown">
+            <summary>Ver descrição</summary>
+            <p>${descricao}</p>
+            ${acoesDocumento}
+          </details>
+        </td>
         <td>${chamado.bairro}</td>
         <td>${formatarData(chamado.criadoEm)}</td>
         <td>${colunaStatus}</td>
@@ -556,6 +590,111 @@ function gerarRelatorioChamadosPDF() {
   });
 
   documentoPdf.save(`relatorio-solicitacoes-${Date.now()}.pdf`);
+}
+
+function obterChamadoPorId(id) {
+  const chamado = chamadosCache.find(item => item.id === id);
+  if (!chamado) {
+    alert("Não foi possível encontrar os dados desta solicitação.");
+    return null;
+  }
+  return chamado;
+}
+
+function imprimirChamado(id) {
+  if (!administradorLogado()) {
+    alert("Apenas administradores autenticados podem imprimir solicitações.");
+    return;
+  }
+
+  const chamado = obterChamadoPorId(id);
+  if (!chamado) return;
+
+  const campos = [
+    ["Protocolo", chamado.protocolo],
+    ["Data de abertura", formatarData(chamado.criadoEm)],
+    ["Solicitante", chamado.nome],
+    ["Telefone", chamado.telefone],
+    ["Status", STATUS_INFO[chamado.status]?.label || chamado.status],
+    ["Categoria", chamado.categoria],
+    ["Bairro/Localidade", chamado.bairro],
+    ["Endereço", chamado.endereco],
+    ["Descrição do problema", chamado.descricao || "Descrição não informada."]
+  ];
+  const conteudo = campos.map(([rotulo, valor]) =>
+    `<section><strong>${escaparHtml(rotulo)}</strong><p>${escaparHtml(valor)}</p></section>`
+  ).join("");
+
+  const janelaImpressao = window.open("", "_blank", "width=700,height=800");
+  if (!janelaImpressao) {
+    alert("Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-ups.");
+    return;
+  }
+
+  janelaImpressao.document.write(`
+    <html>
+      <head>
+        <title>Solicitação ${escaparHtml(chamado.protocolo)}</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 2rem; color: #0f172a; }
+          h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+          header { margin-bottom: 1.5rem; }
+          header p { color: #64748b; }
+          section { margin: 0 0 1rem; break-inside: avoid; }
+          section p { margin: 0.25rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body onload="window.print()">
+        <header>
+          <h1>Detalhes da solicitação</h1>
+          <p>Conecta Nova Santa Rita</p>
+        </header>
+        ${conteudo}
+      </body>
+    </html>
+  `);
+  janelaImpressao.document.close();
+}
+
+function gerarChamadoPDF(id) {
+  const chamado = obterChamadoPorId(id);
+  if (!chamado) return;
+
+  if (!window.jspdf) {
+    alert("Não foi possível carregar o gerador de PDF. Verifique sua conexão com a internet.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const documentoPdf = new jsPDF();
+  documentoPdf.setFontSize(16);
+  documentoPdf.text("Detalhes da solicitação", 14, 18);
+  documentoPdf.setFontSize(10);
+  documentoPdf.setTextColor(100);
+  documentoPdf.text("Conecta Nova Santa Rita", 14, 25);
+  documentoPdf.setTextColor(15, 23, 42);
+
+  documentoPdf.autoTable({
+    startY: 32,
+    body: [
+      ["Protocolo", chamado.protocolo],
+      ["Data de abertura", formatarData(chamado.criadoEm)],
+      ["Solicitante", chamado.nome],
+      ["Telefone", chamado.telefone],
+      ["Status", STATUS_INFO[chamado.status]?.label || chamado.status],
+      ["Categoria", chamado.categoria],
+      ["Bairro/Localidade", chamado.bairro],
+      ["Endereço", chamado.endereco],
+      ["Descrição do problema", chamado.descricao || "Descrição não informada."]
+    ],
+    styles: { fontSize: 10, cellPadding: 3, overflow: "linebreak" },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 48 }, 1: { cellWidth: "auto" } },
+    theme: "grid"
+  });
+
+  const protocoloArquivo = String(chamado.protocolo).replace(/[^a-zA-Z0-9-]/g, "-");
+  documentoPdf.save(`solicitacao-${protocoloArquivo}.pdf`);
 }
 
 // Remove um chamado via API após confirmação do usuário (restrito a administradores)
