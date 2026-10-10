@@ -1,274 +1,146 @@
 // ==========================================
-// CONFIGURAÇÃO DE CHAVES E INICIALIZAÇÃO
-// ==========================================
-const STORAGE_KEYS = {
-  CHAMADOS: "conecta_nsr_chamados",
-  USUARIOS: "conecta_nsr_usuarios",
-  SESSAO_ATIVA: "conecta_nsr_sessao",
-  ADMINISTRADORES: "conecta_nsr_administradores",
-  SESSAO_ADMIN: "conecta_nsr_sessao_admin",
-  NOTICIAS: "conecta_nsr_noticias"
-};
-
-// Dados padrão carregados na primeira execução
-const DADOS_INICIAIS = {
-  chamados: [
-    {
-      protocolo: "NSR-2026-1042",
-      nome: "João Pedro Alves",
-      cpf: "111.222.333-44",
-      categoria: "Iluminação Pública",
-      bairro: "Centro",
-      descricao: "Lâmpada queimada na rua principal",
-      data: "12/09/2026",
-      status: "Em Andamento"
-    },
-    {
-      protocolo: "NSR-2026-1041",
-      nome: "Maria das Dores",
-      cpf: "555.666.777-88",
-      categoria: "Obras e Vias",
-      bairro: "Bairro Novo",
-      descricao: "Buraco na pista oferecendo risco de acidente",
-      data: "11/09/2026",
-      status: "Pendente"
-    }
-  ],
-  usuarios: [],
-  noticias: [
-    {
-      id: "NOT-1",
-      categoria: "Obras",
-      titulo: "Mutirão de pavimentação chega aos bairros da zona sul nesta semana",
-      resumo: "Equipes de infraestrutura iniciam a aplicação de asfalto em mais de 10 ruas principais.",
-      conteudo: "Equipes de infraestrutura iniciam a aplicação de asfalto em mais de 10 ruas principais da zona sul. A previsão é concluir a primeira etapa até a próxima sexta-feira.",
-      data: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: "NOT-2",
-      categoria: "Saúde",
-      titulo: "Campanha de Vacinação no Posto Central ganha horário estendido",
-      resumo: "Unidade de saúde funcionará até às 20h para atender trabalhadores e famílias.",
-      conteudo: "A Secretaria Municipal de Saúde informa que o Posto Central estará com atendimento estendido das 17h às 20h durante toda a semana para atualização da caderneta de vacinação.",
-      data: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: "NOT-3",
-      categoria: "Educação",
-      titulo: "Inscrições abertas para novos cursos técnicos de informática",
-      resumo: "Parceria oferece 150 vagas gratuitas para jovens e adultos do município.",
-      conteudo: "Estão abertas as inscrições para os módulos de Informática e Automação Industrial. Garantia de qualificação profissional com certificação oficial.",
-      data: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  ]
-};
-
-// ==========================================
-// FUNÇÕES GENÉRICAS DO LOCALSTORAGE
+// CONFIGURAÇÃO DA API E CLIENTE HTTP
 // ==========================================
 
-// Lê dados do localStorage de forma segura
-function lerStorage(chave) {
+// Detecta automaticamente a URL da API: localhost em desenvolvimento (servido via http://),
+// Render em produção (inclui o caso de abrir o index.html direto via file://)
+const API_BASE_URL = ["localhost", "127.0.0.1"].includes(location.hostname)
+  ? "http://localhost:3333/api"
+  : "https://cnsr-backend.onrender.com/api";
+
+const TOKEN_KEY = "conecta_nsr_token";
+const ADMIN_PERFIL_KEY = "conecta_nsr_admin_perfil";
+
+// Formata uma data ISO (vinda da API) no padrão brasileiro
+function formatarData(dataIso) {
+  return new Date(dataIso).toLocaleDateString("pt-BR");
+}
+
+// Cliente HTTP central: injeta o token JWT, trata erros e respostas sem corpo (204)
+async function apiFetch(caminho, opcoes = {}) {
+  const cabecalhos = { "Content-Type": "application/json", ...(opcoes.headers || {}) };
+  const token = obterToken();
+  if (token) cabecalhos.Authorization = `Bearer ${token}`;
+
+  let resposta;
   try {
-    const dados = localStorage.getItem(chave);
-    return dados ? JSON.parse(dados) : null;
-  } catch (erro) {
-    console.error(`Erro ao ler chave "${chave}" do Storage:`, erro);
-    return null;
+    resposta = await fetch(`${API_BASE_URL}${caminho}`, { ...opcoes, headers: cabecalhos });
+  } catch (erroDeRede) {
+    throw new Error("Não foi possível conectar à API. Verifique sua conexão ou se o servidor está rodando.");
   }
-}
 
-// Grava dados no localStorage
-function gravarStorage(chave, dados) {
+  let corpo = null;
   try {
-    localStorage.setItem(chave, JSON.stringify(dados));
-    return true;
-  } catch (erro) {
-    console.error(`Erro ao salvar dados na chave "${chave}":`, erro);
-    alert("Não foi possível salvar os dados. Verifique o espaço do navegador.");
-    return false;
-  }
-}
-
-// ==========================================
-// GESTÃO DE USUÁRIOS NO STORAGE
-// ==========================================
-
-// Retorna todos os usuários
-function obterUsuarios() {
-  const usuarios = lerStorage(STORAGE_KEYS.USUARIOS);
-  return usuarios || [];
-}
-
-// Salva um novo usuário
-function cadastrarUsuarioNoStorage(usuarioData) {
-  const usuarios = obterUsuarios();
-
-  // Verificar se o CPF ou E-mail já existem
-  const existe = usuarios.some(
-    u => u.cpf === usuarioData.cpf || u.email.toLowerCase() === usuarioData.email.toLowerCase()
-  );
-
-  if (existe) {
-    return { sucesso: false, mensagem: "Já existe um usuário cadastrado com este CPF ou E-mail." };
+    corpo = await resposta.json();
+  } catch {
+    corpo = null; // respostas sem corpo, ex: 204 No Content
   }
 
-  const novoUsuario = {
-    id: "USR-" + Date.now(),
-    ...usuarioData,
-    dataCadastro: new Date().toLocaleDateString("pt-BR")
-  };
-
-  usuarios.push(novoUsuario);
-  
-  if (gravarStorage(STORAGE_KEYS.USUARIOS, usuarios)) {
-    // Define o usuário recém-cadastrado como sessão ativa
-    gravarStorage(STORAGE_KEYS.SESSAO_ATIVA, novoUsuario);
-    return { sucesso: true, usuario: novoUsuario };
-  }
-
-  return { sucesso: false, mensagem: "Erro interno ao gravar usuário." };
-}
-
-// Retorna a sessão ativa
-function obterSessaoAtiva() {
-  return lerStorage(STORAGE_KEYS.SESSAO_ATIVA);
-}
-
-// Encerra a sessão atual
-function encerrarSessao() {
-  localStorage.removeItem(STORAGE_KEYS.SESSAO_ATIVA);
-}
-
-// ==========================================
-// GESTÃO DE CHAMADOS NO STORAGE
-// ==========================================
-
-// Retorna todos os chamados salvos
-function obterChamados() {
-  let chamados = lerStorage(STORAGE_KEYS.CHAMADOS);
-  if (!chamados) {
-    // Se for o primeiro acesso, inicializa com os dados de demonstração
-    chamados = DADOS_INICIAIS.chamados;
-    gravarStorage(STORAGE_KEYS.CHAMADOS, chamados);
-  }
-  return chamados;
-}
-
-// Registra um novo chamado
-function criarChamadoNoStorage(dadosFormulario) {
-  const chamados = obterChamados();
-
-  const protocolo = "NSR-2026-" + Math.floor(1000 + Math.random() * 9000);
-  const dataHoje = new Date().toLocaleDateString("pt-BR");
-
-  const novoChamado = {
-    protocolo: protocolo,
-    ...dadosFormulario,
-    data: dataHoje,
-    status: "Pendente"
-  };
-
-  chamados.unshift(novoChamado); // Adiciona no início da lista
-
-  if (gravarStorage(STORAGE_KEYS.CHAMADOS, chamados)) {
-    return { sucesso: true, protocolo: protocolo, chamado: novoChamado };
-  }
-
-  return { sucesso: false, mensagem: "Erro ao gravar chamado." };
-}
-
-// Remove um chamado por protocolo
-function excluirChamadoDoStorage(protocolo) {
-  let chamados = obterChamados();
-  chamados = chamados.filter(item => item.protocolo !== protocolo);
-  return gravarStorage(STORAGE_KEYS.CHAMADOS, chamados);
-}
-
-// Atualiza o status de um chamado por protocolo
-function atualizarStatusChamadoNoStorage(protocolo, novoStatus) {
-  const chamados = obterChamados();
-  const chamado = chamados.find(item => item.protocolo === protocolo);
-
-  if (!chamado) return false;
-
-  chamado.status = novoStatus;
-  return gravarStorage(STORAGE_KEYS.CHAMADOS, chamados);
-}
-
-// Limpa todos os dados da aplicação no Storage
-function resetarStorage() {
-  localStorage.removeItem(STORAGE_KEYS.CHAMADOS);
-  localStorage.removeItem(STORAGE_KEYS.USUARIOS);
-  localStorage.removeItem(STORAGE_KEYS.SESSAO_ATIVA);
-  localStorage.removeItem(STORAGE_KEYS.NOTICIAS);
-  location.reload();
-}
-
-// ==========================================
-// GESTÃO DE NOTÍCIAS NO STORAGE
-// ==========================================
-
-// Retorna todas as notícias salvas (mais recentes primeiro)
-function obterNoticias() {
-  let noticias = lerStorage(STORAGE_KEYS.NOTICIAS);
-  if (!noticias) {
-    // Se for o primeiro acesso, inicializa com as notícias de demonstração
-    noticias = DADOS_INICIAIS.noticias;
-    gravarStorage(STORAGE_KEYS.NOTICIAS, noticias);
-  }
-  return noticias;
-}
-
-// Cria ou atualiza uma notícia no Storage (restrito a administradores)
-function salvarNoticiaNoStorage(dadosNoticia, idExistente) {
-  const noticias = obterNoticias();
-
-  if (idExistente) {
-    const noticiaExistente = noticias.find(n => n.id === idExistente);
-    if (!noticiaExistente) {
-      return { sucesso: false, mensagem: "Notícia não encontrada." };
+  if (!resposta.ok) {
+    if (resposta.status === 401 && administradorLogado()) {
+      sairAdministrador();
+      alert("Sua sessão expirou. Faça login novamente.");
     }
-    Object.assign(noticiaExistente, dadosNoticia);
-  } else {
-    noticias.unshift({
-      id: "NOT-" + Date.now(),
-      ...dadosNoticia,
-      data: new Date().toISOString()
-    });
+
+    const mensagemErro = corpo?.erros?.map(erro => erro.mensagem).join(" ") || corpo?.mensagem || "Erro ao comunicar com o servidor.";
+    throw new Error(mensagemErro);
   }
 
-  if (gravarStorage(STORAGE_KEYS.NOTICIAS, noticias)) {
-    return { sucesso: true };
+  return corpo;
+}
+
+// ==========================================
+// CHAMADOS: INTEGRAÇÃO COM A API
+// ==========================================
+
+let chamadosCache = [];
+
+// Busca todos os chamados no backend
+function listarChamados() {
+  return apiFetch("/chamados");
+}
+
+// Registra um novo chamado via API
+function criarChamadoApi(dadosFormulario) {
+  return apiFetch("/chamados", {
+    method: "POST",
+    body: JSON.stringify(dadosFormulario)
+  });
+}
+
+// Atualiza o status de um chamado via API (restrito a administradores)
+function atualizarStatusChamadoApi(id, status) {
+  return apiFetch(`/chamados/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status })
+  });
+}
+
+// Remove um chamado via API (restrito a administradores)
+function removerChamadoApi(id) {
+  return apiFetch(`/chamados/${id}`, { method: "DELETE" });
+}
+
+// Busca a lista de cidadãos cadastrados (restrito a administradores)
+function listarUsuariosApi() {
+  return apiFetch("/usuarios");
+}
+
+// Recarrega os chamados do backend e atualiza tabela e estatísticas
+async function carregarChamados() {
+  try {
+    chamadosCache = await listarChamados();
+  } catch (erro) {
+    console.error("Erro ao carregar chamados:", erro);
+    chamadosCache = [];
   }
-
-  return { sucesso: false, mensagem: "Erro ao gravar notícia." };
+  renderizarTabelaChamados(chamadosCache);
+  atualizarEstatisticas();
 }
 
-// Remove uma notícia por id
-function excluirNoticiaDoStorage(id) {
-  let noticias = obterNoticias();
-  noticias = noticias.filter(item => item.id !== id);
-  return gravarStorage(STORAGE_KEYS.NOTICIAS, noticias);
+// ==========================================
+// NOTÍCIAS: INTEGRAÇÃO COM A API
+// ==========================================
+
+let noticiasCache = [];
+
+// Busca todas as notícias publicadas no backend
+function listarNoticias() {
+  return apiFetch("/noticias");
 }
 
-// Função para ativar a rolagem até o formulário de solicitação e focar no primeiro campo
-function rolarParaFormulario() {
-  const secaoFormulario = document.getElementById("chamados");
-  const primeiroCampo = document.getElementById("nomeCidadao");
+// Publica uma nova notícia via API (restrito a administradores)
+function criarNoticiaApi(dadosNoticia) {
+  return apiFetch("/noticias", {
+    method: "POST",
+    body: JSON.stringify(dadosNoticia)
+  });
+}
 
-  if (secaoFormulario) {
-    // Rola a página suavemente até o formulário
-    secaoFormulario.scrollIntoView({ behavior: 'smooth' });
+// Atualiza uma notícia existente via API (restrito a administradores)
+function atualizarNoticiaApi(id, dadosNoticia) {
+  return apiFetch(`/noticias/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(dadosNoticia)
+  });
+}
 
-    // Foca o cursor no campo de nome após a rolagem
-    setTimeout(() => {
-      if (primeiroCampo) {
-        primeiroCampo.focus();
-      }
-    }, 400);
+// Remove uma notícia via API (restrito a administradores)
+function removerNoticiaApi(id) {
+  return apiFetch(`/noticias/${id}`, { method: "DELETE" });
+}
+
+// Recarrega as notícias do backend e atualiza os painéis
+async function carregarNoticias() {
+  try {
+    noticiasCache = await listarNoticias();
+  } catch (erro) {
+    console.error("Erro ao carregar notícias:", erro);
+    noticiasCache = [];
   }
+  renderizarNoticias();
 }
+
 // ==========================================
 // ATIVAÇÃO DO BOTÃO "+ NOVA SOLICITAÇÃO"
 // ==========================================
@@ -324,13 +196,10 @@ const CATEGORIAS_SERVICO = [
   "Trânsito e Mobilidade"
 ];
 
-// Recalcula e atualiza os cards de estatística com base nos dados reais do Storage
-function atualizarEstatisticas() {
-  const chamados = obterChamados();
-  const usuarios = obterUsuarios();
-
-  const totalChamados = chamados.length;
-  const concluidos = chamados.filter(c => c.status === "Concluído").length;
+// Recalcula e atualiza os cards de estatística com base nos dados reais da API
+async function atualizarEstatisticas() {
+  const totalChamados = chamadosCache.length;
+  const concluidos = chamadosCache.filter(c => c.status === "CONCLUIDO").length;
   const taxaResolucao = totalChamados > 0 ? Math.round((concluidos / totalChamados) * 100) : 0;
 
   const elTotalChamados = document.getElementById("totalChamados");
@@ -340,53 +209,51 @@ function atualizarEstatisticas() {
 
   if (elTotalChamados) elTotalChamados.textContent = totalChamados.toLocaleString("pt-BR");
   if (elTaxaResolucao) elTaxaResolucao.textContent = `${taxaResolucao}%`;
-  if (elTotalCidadaos) elTotalCidadaos.textContent = usuarios.length.toLocaleString("pt-BR");
   if (elTotalSecretarias) elTotalSecretarias.textContent = CATEGORIAS_SERVICO.length;
+
+  if (!elTotalCidadaos) return;
+
+  // A listagem de cidadãos exige autenticação; visitantes anônimos não têm acesso a essa contagem
+  if (!administradorLogado()) {
+    elTotalCidadaos.textContent = "—";
+    return;
+  }
+
+  try {
+    const usuarios = await listarUsuariosApi();
+    elTotalCidadaos.textContent = usuarios.length.toLocaleString("pt-BR");
+  } catch (erro) {
+    elTotalCidadaos.textContent = "—";
+  }
 }
 
 // ==========================================
 // GESTÃO DE ADMINISTRADORES E SESSÃO ADMIN
 // ==========================================
 
-// Gera um hash da senha para não armazenar texto puro no Storage
-async function hashSenha(senha) {
-  // crypto.subtle exige contexto seguro (https ou localhost); em file:// usa-se o fallback abaixo
-  if (window.crypto && window.crypto.subtle) {
-    const dadosCodificados = new TextEncoder().encode(senha);
-    const bufferHash = await crypto.subtle.digest("SHA-256", dadosCodificados);
-    return Array.from(new Uint8Array(bufferHash))
-      .map(byte => byte.toString(16).padStart(2, "0"))
-      .join("");
-  }
-  return hashSenhaFallback(senha);
+// Retorna o token JWT da sessão administrativa (ou null)
+function obterToken() {
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-// Hash simples (não criptográfico) usado apenas quando crypto.subtle não está disponível
-function hashSenhaFallback(senha) {
-  let hash = 0;
-  for (let i = 0; i < senha.length; i++) {
-    hash = (hash << 5) - hash + senha.charCodeAt(i);
-    hash |= 0;
-  }
-  return "fb" + Math.abs(hash).toString(16);
-}
-
-// Retorna todos os administradores cadastrados
-function obterAdministradores() {
-  return lerStorage(STORAGE_KEYS.ADMINISTRADORES) || [];
-}
-
-// Retorna o administrador com sessão ativa (ou null)
-function obterSessaoAdmin() {
-  return lerStorage(STORAGE_KEYS.SESSAO_ADMIN);
+// Retorna o perfil do administrador logado (ou null)
+function obterAdminPerfil() {
+  const dados = localStorage.getItem(ADMIN_PERFIL_KEY);
+  return dados ? JSON.parse(dados) : null;
 }
 
 // Verifica se existe um administrador autenticado no momento
 function administradorLogado() {
-  return obterSessaoAdmin() !== null;
+  return Boolean(obterToken());
 }
 
-// Cadastra um novo administrador a partir do formulário
+// Salva o token e o perfil retornados pelo login
+function salvarSessaoAdmin(token, administrador) {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(ADMIN_PERFIL_KEY, JSON.stringify(administrador));
+}
+
+// Cadastra um novo administrador via API
 async function cadastrarAdministrador(event) {
   event.preventDefault();
 
@@ -401,97 +268,75 @@ async function cadastrarAdministrador(event) {
     return;
   }
 
-  const administradores = obterAdministradores();
-  const jaExiste = administradores.some(
-    admin => admin.usuario.toLowerCase() === usuario.toLowerCase() || admin.email.toLowerCase() === email.toLowerCase()
-  );
+  try {
+    await apiFetch("/administradores", {
+      method: "POST",
+      body: JSON.stringify({ nomeCompleto, email, usuario, senha, confirmarSenha })
+    });
 
-  if (jaExiste) {
-    alert("Já existe um administrador cadastrado com este usuário ou e-mail.");
-    return;
+    document.getElementById("formAdminCadastro").reset();
+    alert("Administrador cadastrado com sucesso! Faça login para continuar.");
+    trocarModalAdmin(null, "modalAdminCadastro", "modalAdminLogin");
+  } catch (erro) {
+    alert(erro.message);
   }
-
-  const novoAdmin = {
-    id: "ADM-" + Date.now(),
-    nomeCompleto,
-    email,
-    usuario,
-    senhaHash: await hashSenha(senha),
-    dataCadastro: new Date().toLocaleDateString("pt-BR")
-  };
-
-  administradores.push(novoAdmin);
-  gravarStorage(STORAGE_KEYS.ADMINISTRADORES, administradores);
-
-  document.getElementById("formAdminCadastro").reset();
-  alert("Administrador cadastrado com sucesso! Faça login para continuar.");
-  trocarModalAdmin(null, "modalAdminCadastro", "modalAdminLogin");
 }
 
-// Autentica um administrador e abre a sessão administrativa
+// Autentica um administrador via API e abre a sessão administrativa
 async function autenticarAdministrador(event) {
   event.preventDefault();
 
   const usuario = document.getElementById("loginUsuarioAdmin").value.trim();
   const senha = document.getElementById("loginSenhaAdmin").value;
 
-  const administradores = obterAdministradores();
-  const senhaHash = await hashSenha(senha);
+  try {
+    const { token, administrador } = await apiFetch("/administradores/login", {
+      method: "POST",
+      body: JSON.stringify({ usuario, senha })
+    });
 
-  const admin = administradores.find(
-    a => a.usuario.toLowerCase() === usuario.toLowerCase() && a.senhaHash === senhaHash
-  );
+    salvarSessaoAdmin(token, administrador);
 
-  if (!admin) {
-    alert("Usuário ou senha inválidos.");
-    return;
+    document.getElementById("formAdminLogin").reset();
+    fecharModal("modalAdminLogin");
+    atualizarInterfaceAdmin();
+    carregarChamados();
+    carregarNoticias();
+  } catch (erro) {
+    alert(erro.message);
   }
-
-  gravarStorage(STORAGE_KEYS.SESSAO_ADMIN, {
-    id: admin.id,
-    nomeCompleto: admin.nomeCompleto,
-    usuario: admin.usuario
-  });
-
-  document.getElementById("formAdminLogin").reset();
-  fecharModal("modalAdminLogin");
-  atualizarInterfaceAdmin();
-  renderizarTabelaChamados();
-  renderizarNoticias();
 }
 
 // Encerra a sessão administrativa ativa
 function sairAdministrador() {
-  localStorage.removeItem(STORAGE_KEYS.SESSAO_ADMIN);
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(ADMIN_PERFIL_KEY);
   atualizarInterfaceAdmin();
-  renderizarTabelaChamados();
-  renderizarNoticias();
+  carregarChamados();
+  carregarNoticias();
 }
 
-// Simula a recuperação de senha por e-mail: como não há backend de envio,
-// uma senha temporária é gerada e exibida na tela no lugar do e-mail real
+// Solicita à API uma senha temporária para o e-mail cadastrado
 async function recuperarSenhaAdministrador(event) {
   event.preventDefault();
 
   const email = document.getElementById("emailRecuperarAdmin").value.trim();
-  const administradores = obterAdministradores();
-  const admin = administradores.find(a => a.email.toLowerCase() === email.toLowerCase());
 
-  if (!admin) {
-    alert("Não encontramos nenhum administrador cadastrado com este e-mail.");
-    return;
+  try {
+    const { senhaTemporaria } = await apiFetch("/administradores/recuperar-senha", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    });
+
+    document.getElementById("formAdminRecuperar").reset();
+    alert(
+      `Este sistema não possui envio real de e-mail. Sua senha temporária é: ${senhaTemporaria}\n\n` +
+      "Utilize-a para entrar e, se desejar, cadastre uma nova senha."
+    );
+    trocarModalAdmin(null, "modalAdminRecuperar", "modalAdminLogin");
+  } catch (erro) {
+    alert(erro.message);
   }
-
-  const senhaTemporaria = Math.random().toString(36).slice(-8);
-  admin.senhaHash = await hashSenha(senhaTemporaria);
-  gravarStorage(STORAGE_KEYS.ADMINISTRADORES, administradores);
-
-  document.getElementById("formAdminRecuperar").reset();
-  alert(
-    `Este sistema não possui envio real de e-mail. Sua senha temporária é: ${senhaTemporaria}\n\n` +
-    "Utilize-a para entrar e, se desejar, cadastre uma nova senha."
-  );
-  trocarModalAdmin(null, "modalAdminRecuperar", "modalAdminLogin");
 }
 
 // Alterna entre os modais de login, cadastro e recuperação de senha
@@ -503,16 +348,16 @@ function trocarModalAdmin(event, idAtual, idDestino) {
 
 // Atualiza o cabeçalho conforme o estado da sessão administrativa
 function atualizarInterfaceAdmin() {
-  const sessao = obterSessaoAdmin();
+  const perfil = obterAdminPerfil();
   const btnAreaAdmin = document.getElementById("btnAreaAdmin");
   const badgeSessao = document.getElementById("adminSessaoBadge");
   const nomeSessao = document.getElementById("adminSessaoNome");
   const btnNovaNoticia = document.getElementById("btnNovaNoticia");
 
-  if (sessao) {
+  if (administradorLogado() && perfil) {
     if (btnAreaAdmin) btnAreaAdmin.classList.add("hidden");
     if (badgeSessao) badgeSessao.classList.remove("hidden");
-    if (nomeSessao) nomeSessao.textContent = `Olá, ${sessao.nomeCompleto.split(" ")[0]}`;
+    if (nomeSessao) nomeSessao.textContent = `Olá, ${perfil.nomeCompleto.split(" ")[0]}`;
     if (btnNovaNoticia) btnNovaNoticia.classList.remove("hidden");
   } else {
     if (btnAreaAdmin) btnAreaAdmin.classList.remove("hidden");
@@ -525,10 +370,10 @@ function atualizarInterfaceAdmin() {
 // RENDERIZAÇÃO DA TABELA DE CHAMADOS
 // ==========================================
 
-const STATUS_CLASSES = {
-  "Pendente": "status-pendente",
-  "Em Andamento": "status-andamento",
-  "Concluído": "status-concluido"
+const STATUS_INFO = {
+  PENDENTE: { label: "Pendente", classe: "status-pendente" },
+  EM_ANDAMENTO: { label: "Em Andamento", classe: "status-andamento" },
+  CONCLUIDO: { label: "Concluído", classe: "status-concluido" }
 };
 
 // Desenha a lista de chamados na tabela de acompanhamento
@@ -536,7 +381,7 @@ function renderizarTabelaChamados(lista) {
   const corpoTabela = document.getElementById("tabelaChamadosBody");
   if (!corpoTabela) return;
 
-  const chamados = lista || obterChamados();
+  const chamados = lista || chamadosCache;
 
   if (chamados.length === 0) {
     corpoTabela.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhuma solicitação encontrada.</td></tr>`;
@@ -544,19 +389,19 @@ function renderizarTabelaChamados(lista) {
   }
 
   corpoTabela.innerHTML = chamados.map(chamado => {
-    const classeStatus = STATUS_CLASSES[chamado.status] || "status-pendente";
+    const infoStatus = STATUS_INFO[chamado.status] || STATUS_INFO.PENDENTE;
     const logado = administradorLogado();
 
     const colunaStatus = logado
-      ? `<select class="form-control select-status" onchange="alterarStatusChamado('${chamado.protocolo}', this.value)">
-          ${Object.keys(STATUS_CLASSES).map(status =>
-            `<option value="${status}" ${status === chamado.status ? "selected" : ""}>${status}</option>`
+      ? `<select class="form-control select-status" onchange="alterarStatusChamado(${chamado.id}, this.value)">
+          ${Object.entries(STATUS_INFO).map(([valor, info]) =>
+            `<option value="${valor}" ${valor === chamado.status ? "selected" : ""}>${info.label}</option>`
           ).join("")}
         </select>`
-      : `<span class="status-badge ${classeStatus}">${chamado.status}</span>`;
+      : `<span class="status-badge ${infoStatus.classe}">${infoStatus.label}</span>`;
 
     const acoesDisponiveis = logado
-      ? `<button type="button" class="btn-text" onclick="excluirChamado('${chamado.protocolo}')" title="Excluir solicitação">
+      ? `<button type="button" class="btn-text" onclick="excluirChamado(${chamado.id}, '${chamado.protocolo}')" title="Excluir solicitação">
           <i class="fa-solid fa-trash"></i>
         </button>`
       : `<span title="Somente administradores podem excluir">&mdash;</span>`;
@@ -567,7 +412,7 @@ function renderizarTabelaChamados(lista) {
         <td>${chamado.nome}</td>
         <td>${chamado.categoria}</td>
         <td>${chamado.bairro}</td>
-        <td>${chamado.data}</td>
+        <td>${formatarData(chamado.criadoEm)}</td>
         <td>${colunaStatus}</td>
         <td>${acoesDisponiveis}</td>
       </tr>
@@ -575,29 +420,31 @@ function renderizarTabelaChamados(lista) {
   }).join("");
 }
 
-// Altera o status de um chamado (restrito a administradores)
-function alterarStatusChamado(protocolo, novoStatus) {
+// Altera o status de um chamado via API (restrito a administradores)
+async function alterarStatusChamado(id, novoStatus) {
   if (!administradorLogado()) {
     alert("Apenas administradores autenticados podem alterar o status das solicitações.");
     renderizarTabelaChamados();
     return;
   }
 
-  if (atualizarStatusChamadoNoStorage(protocolo, novoStatus)) {
+  try {
+    await atualizarStatusChamadoApi(id, novoStatus);
+    await carregarChamados();
+  } catch (erro) {
+    alert(erro.message);
     renderizarTabelaChamados();
-    atualizarEstatisticas();
   }
 }
 
-// Retorna os chamados que atendem ao termo digitado na busca (ou todos, se vazio)
+// Retorna os chamados (já carregados) que atendem ao termo digitado na busca
 function obterChamadosFiltrados() {
   const campoBusca = document.getElementById("inputBuscaProtocolo");
   const termo = campoBusca ? campoBusca.value.trim().toLowerCase() : "";
-  const chamados = obterChamados();
 
-  if (!termo) return chamados;
+  if (!termo) return chamadosCache;
 
-  return chamados.filter(chamado =>
+  return chamadosCache.filter(chamado =>
     chamado.protocolo.toLowerCase().includes(termo) ||
     chamado.bairro.toLowerCase().includes(termo) ||
     chamado.nome.toLowerCase().includes(termo) ||
@@ -625,8 +472,8 @@ function montarHtmlRelatorioChamados() {
       <td>${chamado.nome}</td>
       <td>${chamado.categoria}</td>
       <td>${chamado.bairro}</td>
-      <td>${chamado.data}</td>
-      <td>${chamado.status}</td>
+      <td>${formatarData(chamado.criadoEm)}</td>
+      <td>${STATUS_INFO[chamado.status]?.label || chamado.status}</td>
     </tr>
   `).join("");
 
@@ -701,8 +548,8 @@ function gerarRelatorioChamadosPDF() {
       chamado.nome,
       chamado.categoria,
       chamado.bairro,
-      chamado.data,
-      chamado.status
+      formatarData(chamado.criadoEm),
+      STATUS_INFO[chamado.status]?.label || chamado.status
     ]),
     styles: { fontSize: 8 },
     headStyles: { fillColor: [2, 132, 199] }
@@ -711,8 +558,8 @@ function gerarRelatorioChamadosPDF() {
   documentoPdf.save(`relatorio-solicitacoes-${Date.now()}.pdf`);
 }
 
-// Remove um chamado da lista após confirmação do usuário (restrito a administradores)
-function excluirChamado(protocolo) {
+// Remove um chamado via API após confirmação do usuário (restrito a administradores)
+async function excluirChamado(id, protocolo) {
   if (!administradorLogado()) {
     alert("Apenas administradores autenticados podem excluir solicitações.");
     return;
@@ -720,9 +567,11 @@ function excluirChamado(protocolo) {
 
   if (!confirm(`Deseja realmente excluir a solicitação ${protocolo}?`)) return;
 
-  if (excluirChamadoDoStorage(protocolo)) {
-    renderizarTabelaChamados();
-    atualizarEstatisticas();
+  try {
+    await removerChamadoApi(id);
+    await carregarChamados();
+  } catch (erro) {
+    alert(erro.message);
   }
 }
 
@@ -742,8 +591,8 @@ function selecionarCategoria(categoria) {
 // Guarda o chamado exibido no modal de sucesso para impressão/download do comprovante
 let ultimoChamadoRegistrado = null;
 
-// Trata o envio do formulário de nova solicitação
-function salvarChamado(event) {
+// Trata o envio do formulário de nova solicitação via API
+async function salvarChamado(event) {
   event.preventDefault();
 
   const dadosFormulario = {
@@ -755,22 +604,21 @@ function salvarChamado(event) {
     descricao: document.getElementById("descricaoChamado").value.trim()
   };
 
-  const resultado = criarChamadoNoStorage(dadosFormulario);
+  try {
+    const chamadoCriado = await criarChamadoApi(dadosFormulario);
 
-  if (resultado.sucesso) {
     document.getElementById("formNovoChamado").reset();
-    renderizarTabelaChamados();
-    atualizarEstatisticas();
+    await carregarChamados();
 
-    ultimoChamadoRegistrado = resultado.chamado;
+    ultimoChamadoRegistrado = chamadoCriado;
 
     const campoProtocolo = document.getElementById("modalProtocoloNumero");
     if (campoProtocolo) {
-      campoProtocolo.textContent = resultado.protocolo;
+      campoProtocolo.textContent = chamadoCriado.protocolo;
     }
     abrirModal("modalSucesso");
-  } else {
-    alert(resultado.mensagem || "Não foi possível registrar a solicitação.");
+  } catch (erro) {
+    alert(erro.message || "Não foi possível registrar a solicitação.");
   }
 }
 
@@ -779,8 +627,8 @@ function montarTextoComprovante(chamado) {
   return `COMPROVANTE DE SOLICITAÇÃO - CONECTA NOVA SANTA RITA
 ========================================================
 Protocolo: ${chamado.protocolo}
-Data de Abertura: ${chamado.data}
-Status: ${chamado.status}
+Data de Abertura: ${formatarData(chamado.criadoEm)}
+Status: ${chamado.statusLabel}
 
 Solicitante: ${chamado.nome}
 Telefone: ${chamado.telefone}
@@ -859,7 +707,7 @@ function fecharModal(idModal) {
 
 // Preenche e exibe o modal de leitura da notícia
 function abrirNoticia(id) {
-  const noticia = obterNoticias().find(n => n.id === id);
+  const noticia = noticiasCache.find(n => n.id === id);
   if (!noticia) return;
 
   document.getElementById("noticiaTitulo").textContent = noticia.titulo;
@@ -895,22 +743,21 @@ function renderizarNoticias() {
   const container = document.getElementById("newsGridContainer");
   if (!container) return;
 
-  const noticias = obterNoticias();
   const logado = administradorLogado();
 
-  if (noticias.length === 0) {
+  if (noticiasCache.length === 0) {
     container.innerHTML = `<p class="section-description">Nenhuma notícia publicada no momento.</p>`;
     return;
   }
 
-  container.innerHTML = noticias.map(noticia => {
+  container.innerHTML = noticiasCache.map(noticia => {
     const classeBadge = CATEGORIA_NOTICIA_CLASSES[noticia.categoria] || "";
     const acoesAdmin = logado
       ? `<div class="news-admin-actions">
-          <button type="button" class="btn-text" onclick="abrirModalNoticiaForm('${noticia.id}')" title="Editar notícia">
+          <button type="button" class="btn-text" onclick="abrirModalNoticiaForm(${noticia.id})" title="Editar notícia">
             <i class="fa-solid fa-pen"></i> Editar
           </button>
-          <button type="button" class="btn-text" onclick="excluirNoticia('${noticia.id}')" title="Excluir notícia">
+          <button type="button" class="btn-text" onclick="excluirNoticia(${noticia.id})" title="Excluir notícia">
             <i class="fa-solid fa-trash"></i> Excluir
           </button>
         </div>`
@@ -923,8 +770,8 @@ function renderizarNoticias() {
         <p class="news-excerpt">${noticia.resumo}</p>
         ${acoesAdmin}
         <div class="news-footer">
-          <span><i class="fa-regular fa-clock"></i> ${calcularTempoRelativo(noticia.data)}</span>
-          <button class="btn-text" onclick="abrirNoticia('${noticia.id}')">Ler mais <i class="fa-solid fa-arrow-right"></i></button>
+          <span><i class="fa-regular fa-clock"></i> ${calcularTempoRelativo(noticia.criadoEm)}</span>
+          <button class="btn-text" onclick="abrirNoticia(${noticia.id})">Ler mais <i class="fa-solid fa-arrow-right"></i></button>
         </div>
       </article>
     `;
@@ -943,7 +790,7 @@ function abrirModalNoticiaForm(id) {
   formulario.reset();
 
   if (id) {
-    const noticia = obterNoticias().find(n => n.id === id);
+    const noticia = noticiasCache.find(n => n.id === id);
     if (!noticia) return;
 
     tituloModal.textContent = "Editar Notícia";
@@ -960,8 +807,8 @@ function abrirModalNoticiaForm(id) {
   abrirModal("modalNoticiaForm");
 }
 
-// Trata o envio do formulário de criação/edição de notícia
-function salvarNoticia(event) {
+// Trata o envio do formulário de criação/edição de notícia via API
+async function salvarNoticia(event) {
   event.preventDefault();
 
   if (!administradorLogado()) {
@@ -969,7 +816,8 @@ function salvarNoticia(event) {
     return;
   }
 
-  const idExistente = document.getElementById("noticiaIdForm").value || null;
+  const valorIdForm = document.getElementById("noticiaIdForm").value;
+  const idExistente = valorIdForm ? Number(valorIdForm) : null;
   const dadosNoticia = {
     categoria: document.getElementById("noticiaCategoriaForm").value,
     titulo: document.getElementById("noticiaTituloForm").value.trim(),
@@ -977,18 +825,22 @@ function salvarNoticia(event) {
     conteudo: document.getElementById("noticiaConteudoForm").value.trim()
   };
 
-  const resultado = salvarNoticiaNoStorage(dadosNoticia, idExistente);
+  try {
+    if (idExistente) {
+      await atualizarNoticiaApi(idExistente, dadosNoticia);
+    } else {
+      await criarNoticiaApi(dadosNoticia);
+    }
 
-  if (resultado.sucesso) {
     fecharModal("modalNoticiaForm");
-    renderizarNoticias();
-  } else {
-    alert(resultado.mensagem || "Não foi possível salvar a notícia.");
+    await carregarNoticias();
+  } catch (erro) {
+    alert(erro.message || "Não foi possível salvar a notícia.");
   }
 }
 
-// Remove uma notícia após confirmação do usuário (restrito a administradores)
-function excluirNoticia(id) {
+// Remove uma notícia via API após confirmação do usuário (restrito a administradores)
+async function excluirNoticia(id) {
   if (!administradorLogado()) {
     alert("Apenas administradores autenticados podem excluir notícias.");
     return;
@@ -996,8 +848,11 @@ function excluirNoticia(id) {
 
   if (!confirm("Deseja realmente excluir esta notícia?")) return;
 
-  if (excluirNoticiaDoStorage(id)) {
-    renderizarNoticias();
+  try {
+    await removerNoticiaApi(id);
+    await carregarNoticias();
+  } catch (erro) {
+    alert(erro.message);
   }
 }
 
@@ -1019,10 +874,9 @@ function ativarConsultaProtocolo() {
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  renderizarTabelaChamados();
-  atualizarEstatisticas();
   atualizarInterfaceAdmin();
-  renderizarNoticias();
+  carregarChamados();
+  carregarNoticias();
 
   const btnConsulta = document.getElementById("btnConsultarProtocolo");
   if (btnConsulta) {
