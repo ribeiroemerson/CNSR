@@ -379,9 +379,9 @@ function atualizarInterfaceAdmin() {
 // ==========================================
 
 const STATUS_INFO = {
-  PENDENTE: { label: "Pendente", classe: "status-pendente" },
-  EM_ANDAMENTO: { label: "Em Andamento", classe: "status-andamento" },
-  CONCLUIDO: { label: "Concluído", classe: "status-concluido" }
+  PENDENTE: { label: "Pendente", classe: "status-pendente", fundoPdf: [254, 226, 226], textoPdf: [153, 27, 27] },
+  EM_ANDAMENTO: { label: "Em Andamento", classe: "status-andamento", fundoPdf: [254, 243, 199], textoPdf: [146, 64, 14] },
+  CONCLUIDO: { label: "Concluído", classe: "status-concluido", fundoPdf: [220, 252, 231], textoPdf: [22, 101, 52] }
 };
 
 function escaparHtml(texto) {
@@ -513,7 +513,7 @@ function montarHtmlRelatorioChamados() {
       <td>${chamado.categoria}</td>
       <td>${chamado.bairro}</td>
       <td>${formatarData(chamado.criadoEm)}</td>
-      <td>${STATUS_INFO[chamado.status]?.label || chamado.status}</td>
+      <td><span class="status-badge ${STATUS_INFO[chamado.status]?.classe || STATUS_INFO.PENDENTE.classe}">${escaparHtml(STATUS_INFO[chamado.status]?.label || chamado.status)}</span></td>
     </tr>
   `).join("");
 
@@ -555,6 +555,10 @@ function imprimirRelatorioChamados() {
           table { width: 100%; border-collapse: collapse; }
           th, td { border: 1px solid #e2e8f0; padding: 0.5rem; text-align: left; font-size: 0.85rem; }
           th { background-color: #f8fafc; }
+          .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .status-pendente { background-color: #fee2e2; color: #991b1b; }
+          .status-andamento { background-color: #fef3c7; color: #92400e; }
+          .status-concluido { background-color: #dcfce7; color: #166534; }
         </style>
       </head>
       <body onload="window.print()">${montarHtmlRelatorioChamados()}</body>
@@ -592,7 +596,16 @@ function gerarRelatorioChamadosPDF() {
       STATUS_INFO[chamado.status]?.label || chamado.status
     ]),
     styles: { fontSize: 8 },
-    headStyles: { fillColor: [2, 132, 199] }
+    headStyles: { fillColor: [2, 132, 199] },
+    didParseCell: dadosCelula => {
+      if (dadosCelula.section !== "body" || dadosCelula.column.index !== 5) return;
+
+      const chamado = chamados[dadosCelula.row.index];
+      const infoStatus = STATUS_INFO[chamado.status] || STATUS_INFO.PENDENTE;
+      dadosCelula.cell.styles.fillColor = infoStatus.fundoPdf;
+      dadosCelula.cell.styles.textColor = infoStatus.textoPdf;
+      dadosCelula.cell.styles.fontStyle = "bold";
+    }
   });
 
   documentoPdf.save(`relatorio-solicitacoes-${Date.now()}.pdf`);
