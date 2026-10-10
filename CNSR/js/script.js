@@ -411,9 +411,9 @@ function renderizarTabelaChamados(lista) {
     const logado = administradorLogado();
 
     const colunaStatus = logado
-      ? `<select class="form-control select-status" onchange="alterarStatusChamado(${chamado.id}, this.value)">
+      ? `<select class="form-control select-status ${infoStatus.classe}" onchange="alterarStatusChamado(${chamado.id}, this.value, this)">
           ${Object.entries(STATUS_INFO).map(([valor, info]) =>
-            `<option value="${valor}" ${valor === chamado.status ? "selected" : ""}>${info.label}</option>`
+            `<option class="${info.classe}" value="${valor}" ${valor === chamado.status ? "selected" : ""}>${info.label}</option>`
           ).join("")}
         </select>`
       : `<span class="status-badge ${infoStatus.classe}">${infoStatus.label}</span>`;
@@ -457,12 +457,16 @@ function renderizarTabelaChamados(lista) {
 }
 
 // Altera o status de um chamado via API (restrito a administradores)
-async function alterarStatusChamado(id, novoStatus) {
+async function alterarStatusChamado(id, novoStatus, seletorStatus) {
   if (!administradorLogado()) {
     alert("Apenas administradores autenticados podem alterar o status das solicitações.");
     renderizarTabelaChamados();
     return;
   }
+
+  const infoStatus = STATUS_INFO[novoStatus] || STATUS_INFO.PENDENTE;
+  seletorStatus.classList.remove(...Object.values(STATUS_INFO).map(info => info.classe));
+  seletorStatus.classList.add(infoStatus.classe);
 
   try {
     await atualizarStatusChamadoApi(id, novoStatus);
