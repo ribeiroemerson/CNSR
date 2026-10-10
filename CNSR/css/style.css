@@ -16,10 +16,10 @@ background-image: url(img/logo.png); /* Nome ou link da imagem */
   --text-muted: #64748b;
   --border-color: #e2e8f0;
 
-  --status-pendente-bg: #fef3c7;
-  --status-pendente-color: #92400e;
-  --status-andamento-bg: #e0f2fe;
-  --status-andamento-color: #075985;
+  --status-pendente-bg: #fee2e2;
+  --status-pendente-color: #991b1b;
+  --status-andamento-bg: #fef3c7;
+  --status-andamento-color: #92400e;
   --status-concluido-bg: #dcfce7;
   --status-concluido-color: #166534;
 
