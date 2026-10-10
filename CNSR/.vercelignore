@@ -1,0 +1,3 @@
+# Não implantar o backend Node/Express junto com o site estático na Vercel
+backend/
+.git/
