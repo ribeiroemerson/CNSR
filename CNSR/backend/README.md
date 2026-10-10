@@ -52,7 +52,7 @@ Passos:
 1. Confirme que `render.yaml` está commitado na raiz do repositório e enviado (`git push`) para o GitHub.
 2. No painel do Render, escolha **New > Blueprint** e selecione o repositório.
 3. Revise os recursos detectados a partir do `render.yaml` (banco `cnsr-db` + serviço `cnsr-backend`) e confirme em **Apply**.
-4. Após o primeiro deploy, ajuste `CORS_ORIGIN` para o domínio real do front-end (em vez de `*`).
+4. O frontend publicado na Vercel usa o rewrite `/api` para acessar a API na mesma origem, então não precisa de configuração adicional de CORS. O valor `CORS_ORIGIN: "*"` do Blueprint também permite desenvolvimento local; caso o frontend passe a chamar a API diretamente entre domínios, restrinja essa variável às origens necessárias.
 
 ## Endpoints principais
 

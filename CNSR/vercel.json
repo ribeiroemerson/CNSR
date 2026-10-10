@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://cnsr-backend.onrender.com/api/:path*"
+    }
+  ]
+}

@@ -2,11 +2,13 @@
 // CONFIGURAÇÃO DA API E CLIENTE HTTP
 // ==========================================
 
-// Detecta automaticamente a URL da API: localhost em desenvolvimento (servido via http://),
-// Render em produção (inclui o caso de abrir o index.html direto via file://)
+// Em produção, a Vercel encaminha /api para o backend no Render.
+// Ao abrir o arquivo diretamente, usa o endereço público do backend.
 const API_BASE_URL = ["localhost", "127.0.0.1"].includes(location.hostname)
   ? "http://localhost:3333/api"
-  : "https://cnsr-backend.onrender.com/api";
+  : location.protocol === "file:"
+    ? "https://cnsr-backend.onrender.com/api"
+    : "/api";
 
 const TOKEN_KEY = "conecta_nsr_token";
 const ADMIN_PERFIL_KEY = "conecta_nsr_admin_perfil";
