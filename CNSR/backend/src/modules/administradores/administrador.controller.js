@@ -1,10 +1,32 @@
 const service = require("./administrador.service");
-const { paraSaidaAdministrador } = require("./administrador.dto");
+const { paraSaidaAdministrador, paraSaidaConvite } = require("./administrador.dto");
 const { asyncHandler } = require("../../utils/asyncHandler");
 
 const cadastrar = asyncHandler(async (req, res) => {
   const administrador = await service.cadastrarAdministrador(req.body);
   res.status(201).json(paraSaidaAdministrador(administrador));
+});
+
+const criarConvite = asyncHandler(async (req, res) => {
+  const { convite, token, enviado } = await service.criarConvite(req.administrador.id, req.body.email);
+  res.status(201).json({
+    ...paraSaidaConvite(convite),
+    enviado,
+    ...(!enviado && { token }),
+    mensagem: enviado
+      ? "Convite enviado por e-mail."
+      : "E-mail não enviado (Gmail não configurado ou falhou). Entregue este token ao convidado; ele não será exibido novamente."
+  });
+});
+
+const listarConvites = asyncHandler(async (req, res) => {
+  const convites = await service.listarConvites();
+  res.json(convites.map(paraSaidaConvite));
+});
+
+const revogarConvite = asyncHandler(async (req, res) => {
+  await service.revogarConvite(Number(req.params.id));
+  res.status(204).send();
 });
 
 const login = asyncHandler(async (req, res) => {
@@ -13,10 +35,13 @@ const login = asyncHandler(async (req, res) => {
 });
 
 const recuperarSenha = asyncHandler(async (req, res) => {
-  const { senhaTemporaria } = await service.recuperarSenha(req.body.email);
+  const { senhaTemporaria, enviado } = await service.recuperarSenha(req.body.email);
   res.json({
-    mensagem: "Senha temporária gerada. Em produção, ela seria enviada por e-mail.",
-    senhaTemporaria
+    enviado,
+    ...(!enviado && { senhaTemporaria }),
+    mensagem: enviado
+      ? "Senha temporária enviada por e-mail ao administrador."
+      : "E-mail não enviado (Gmail não configurado ou falhou). Entregue a senha temporária por um canal seguro."
   });
 });
 
@@ -40,4 +65,4 @@ const remover = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { cadastrar, login, recuperarSenha, listar, buscarPorId, atualizar, remover };
+module.exports = { cadastrar, criarConvite, listarConvites, revogarConvite, login, recuperarSenha, listar, buscarPorId, atualizar, remover };

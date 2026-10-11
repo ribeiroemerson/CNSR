@@ -2,9 +2,10 @@ const { Router } = require("express");
 const rateLimit = require("express-rate-limit");
 const controller = require("./administrador.controller");
 const { validate } = require("../../middlewares/validate");
-const { autenticar } = require("../../middlewares/auth");
+const { autenticar, exigirAdministradorPrincipal } = require("../../middlewares/auth");
 const {
   cadastrarAdministradorSchema,
+  criarConviteSchema,
   loginAdministradorSchema,
   recuperarSenhaSchema,
   atualizarAdministradorSchema
@@ -19,13 +20,22 @@ const limitadorAutenticacao = rateLimit({
   message: { mensagem: "Muitas tentativas. Tente novamente em alguns minutos." }
 });
 
+// Limita tentativas de cadastro para dificultar a adivinhação de tokens de convite
+const limitadorCadastro = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { mensagem: "Muitas tentativas. Tente novamente em alguns minutos." }
+});
+
 const router = Router();
 
 /**
  * @openapi
  * /administradores:
  *   post:
- *     summary: Cadastra um novo administrador
+ *     summary: Cadastra um novo administrador (exige token de convite do administrador principal)
  *     tags: [Administradores]
  *     requestBody:
  *       required: true
@@ -42,6 +52,8 @@ const router = Router();
  *               $ref: '#/components/schemas/Administrador'
  *       400:
  *         description: Dados inválidos
+ *       403:
+ *         description: Convite ausente, inválido, expirado ou destinado a outro e-mail
  *       409:
  *         description: Usuário ou e-mail já cadastrado
  *   get:
@@ -59,7 +71,63 @@ const router = Router();
  *               items:
  *                 $ref: '#/components/schemas/Administrador'
  */
-router.post("/", validate(cadastrarAdministradorSchema), controller.cadastrar);
+router.post("/", limitadorCadastro, validate(cadastrarAdministradorSchema), controller.cadastrar);
+
+/**
+ * @openapi
+ * /administradores/convites:
+ *   post:
+ *     summary: Gera um token de convite para um e-mail (apenas administrador principal)
+ *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       201:
+ *         description: Convite criado; o token é exibido uma única vez
+ *       403:
+ *         description: Apenas o administrador principal pode convidar
+ *       409:
+ *         description: Já existe um administrador com este e-mail
+ *   get:
+ *     summary: Lista os convites pendentes (apenas administrador principal)
+ *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Convites pendentes e ainda válidos
+ * /administradores/convites/{id}:
+ *   delete:
+ *     summary: Revoga um convite pendente (apenas administrador principal)
+ *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       204:
+ *         description: Convite revogado
+ *       404:
+ *         description: Convite pendente não encontrado
+ */
+router.post("/convites", autenticar, exigirAdministradorPrincipal, validate(criarConviteSchema), controller.criarConvite);
+router.get("/convites", autenticar, exigirAdministradorPrincipal, controller.listarConvites);
+router.delete("/convites/:id", autenticar, exigirAdministradorPrincipal, controller.revogarConvite);
 
 /**
  * @openapi
@@ -91,8 +159,10 @@ router.post("/login", limitadorAutenticacao, validate(loginAdministradorSchema),
  * @openapi
  * /administradores/recuperar-senha:
  *   post:
- *     summary: Gera uma senha temporária para o e-mail cadastrado
+ *     summary: Gera senha temporária para um administrador (apenas administrador principal)
  *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -102,12 +172,12 @@ router.post("/login", limitadorAutenticacao, validate(loginAdministradorSchema),
  *     responses:
  *       200:
  *         description: Senha temporária gerada
+ *       403:
+ *         description: Apenas o administrador principal pode redefinir senhas
  *       404:
  *         description: E-mail não encontrado
- *       429:
- *         description: Muitas tentativas, tente novamente mais tarde
  */
-router.post("/recuperar-senha", limitadorAutenticacao, validate(recuperarSenhaSchema), controller.recuperarSenha);
+router.post("/recuperar-senha", autenticar, exigirAdministradorPrincipal, validate(recuperarSenhaSchema), controller.recuperarSenha);
 
 /**
  * @openapi

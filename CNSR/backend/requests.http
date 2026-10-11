@@ -11,7 +11,7 @@ Content-Type: application/json
   "telefone": "(86) 99999-1111"
 }
 
-### Cadastrar administrador
+### Cadastrar administrador (principal: e-mail = ADMIN_PRINCIPAL_EMAIL, sem token; demais: com tokenConvite)
 POST {{baseUrl}}/administradores
 Content-Type: application/json
 
@@ -20,8 +20,26 @@ Content-Type: application/json
   "email": "admin@nsr.gov.br",
   "usuario": "admin.nsr",
   "senha": "senha123",
-  "confirmarSenha": "senha123"
+  "confirmarSenha": "senha123",
+  "tokenConvite": "COLE_O_TOKEN_AQUI"
 }
+
+### Gerar convite (admin principal)
+POST {{baseUrl}}/administradores/convites
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
+
+{
+  "email": "novo.admin@nsr.gov.br"
+}
+
+### Listar convites pendentes (admin principal)
+GET {{baseUrl}}/administradores/convites
+Authorization: Bearer {{login.response.body.token}}
+
+### Revogar convite (admin principal)
+DELETE {{baseUrl}}/administradores/convites/1
+Authorization: Bearer {{login.response.body.token}}
 
 ### Login do administrador
 # @name login
@@ -33,9 +51,10 @@ Content-Type: application/json
   "senha": "senha123"
 }
 
-### Recuperar senha do administrador
+### Redefinir senha de administrador (admin principal)
 POST {{baseUrl}}/administradores/recuperar-senha
 Content-Type: application/json
+Authorization: Bearer {{login.response.body.token}}
 
 {
   "email": "admin@nsr.gov.br"

@@ -9,7 +9,11 @@ API REST em Node.js/Express para o projeto **Conecta Nova Santa Rita**, com pers
 
 ## Como rodar
 
-1. `cp .env.example .env` e preencha `DATABASE_URL` (PostgreSQL) e `JWT_SECRET`.
+1. `cp .env.example .env` e preencha `DATABASE_URL` (PostgreSQL), `JWT_SECRET` e `ADMIN_PRINCIPAL_EMAIL`.
+
+> **Envio por Gmail (opcional):** defina `GMAIL_USER` e `GMAIL_APP_PASSWORD` (uma "Senha de app" da conta Google, com verificação em 2 etapas — nunca a senha normal). Com isso, o token de convite e a senha temporária são enviados por e-mail e não aparecem na resposta da API. Sem a configuração (ou se o envio falhar), eles são devolvidos apenas ao administrador principal.
+>
+> **Cadastro de administradores:** é restrito. O e-mail definido em `ADMIN_PRINCIPAL_EMAIL` pode criar o primeiro administrador (principal) sem token. Depois, só o principal gera convites (`POST /api/administradores/convites`); o token é de uso único, vale 48h, só funciona com o e-mail convidado e fica salvo apenas como hash. Aplique a migration com `npm run db:deploy`.
 2. `npm install`
 3. `npx prisma migrate dev --name init`
 4. `npm run dev`
@@ -65,9 +69,12 @@ Passos:
 | GET    | /api/chamados/protocolo/:protocolo | não          | Consulta por protocolo            |
 | PATCH  | /api/chamados/:id/status           | sim          | Alteração de status               |
 | DELETE | /api/chamados/:id                  | sim          | Exclusão de solicitação           |
-| POST   | /api/administradores               | não          | Cadastro de administrador         |
+| POST   | /api/administradores               | não (token de convite) | Cadastro restrito de administrador |
+| POST   | /api/administradores/convites      | admin principal | Gera token de convite para um e-mail |
+| GET    | /api/administradores/convites      | admin principal | Lista convites pendentes          |
+| DELETE | /api/administradores/convites/:id  | admin principal | Revoga um convite pendente        |
 | POST   | /api/administradores/login         | não          | Login (retorna token JWT)         |
-| POST   | /api/administradores/recuperar-senha | não        | Recuperação de senha              |
+| POST   | /api/administradores/recuperar-senha | admin principal | Gera senha temporária para um admin |
 | GET    | /api/noticias                      | não          | Listagem de notícias              |
 | POST   | /api/noticias                      | sim          | Publicação de notícia             |
 | PUT    | /api/noticias/:id                  | sim          | Edição de notícia                 |

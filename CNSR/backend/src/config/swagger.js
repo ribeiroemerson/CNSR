@@ -110,7 +110,8 @@ const options = {
             email: { type: "string", format: "email" },
             usuario: { type: "string" },
             senha: { type: "string", format: "password", minLength: 6 },
-            confirmarSenha: { type: "string", format: "password" }
+            confirmarSenha: { type: "string", format: "password" },
+            tokenConvite: { type: "string", description: "Token gerado pelo administrador principal para este e-mail" }
           }
         },
         Administrador: {
@@ -120,6 +121,7 @@ const options = {
             nomeCompleto: { type: "string" },
             email: { type: "string" },
             usuario: { type: "string" },
+            principal: { type: "boolean" },
             dataCadastro: { type: "string", format: "date-time" }
           }
         },

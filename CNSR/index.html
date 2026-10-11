@@ -44,6 +44,9 @@
         </button>
         <div id="adminSessaoBadge" class="admin-session-badge hidden">
           <span id="adminSessaoNome"></span>
+          <button type="button" id="btnConvidarAdmin" class="btn-text hidden" onclick="abrirModalConvites()">
+            <i class="fa-solid fa-envelope-open-text"></i> Convidar
+          </button>
           <button type="button" class="btn-text" onclick="sairAdministrador()">Sair</button>
         </div>
       </div>
@@ -205,12 +208,55 @@
       </div>
     </section>
 
-    <!-- LISTAGEM E CONSULTA DE CHAMADOS -->
-    <section class="section-block">
+    <!-- CONSULTA DE SOLICITAÇÕES PARA USUÁRIOS -->
+    <section class="section-block user-tracking-section">
       <div class="section-header-flex">
         <div>
           <h2 class="section-title">Acompanhamento de Solicitações</h2>
-          <p class="section-description">Consulte as demandas mais recentes registradas pela comunidade</p>
+          <p class="section-description">Consulte sua solicitação por número de protocolo ou telefone cadastrado.</p>
+        </div>
+      </div>
+
+      <div class="user-tracking-card">
+        <div class="user-tracking-search">
+          <div class="search-field">
+            <label for="inputBuscaProtocoloUsuario">Número do protocolo</label>
+            <input type="text" id="inputBuscaProtocoloUsuario" class="form-control" placeholder="Ex.: NSR-2026-0001">
+          </div>
+
+          <div class="search-field">
+            <label for="inputBuscaTelefoneUsuario">Número de telefone</label>
+            <input type="text" id="inputBuscaTelefoneUsuario" class="form-control" placeholder="Ex.: (86) 99999-1234">
+          </div>
+
+          <div class="search-field search-actions">
+            <button type="button" id="btnConsultarSolicitacaoUsuario" class="btn btn-primary">
+              <i class="fa-solid fa-magnifying-glass"></i> Consultar
+            </button>
+          </div>
+        </div>
+
+        <div class="user-tracking-actions">
+          <button type="button" id="btnImprimirConsultaUsuario" class="btn btn-outline" onclick="imprimirConsultaUsuario()">
+            <i class="fa-solid fa-print"></i> Imprimir
+          </button>
+          <button type="button" id="btnBaixarConsultaUsuario" class="btn btn-outline" onclick="gerarConsultaUsuarioPDF()">
+            <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+          </button>
+        </div>
+      </div>
+
+      <div id="resultadoConsultaUsuario" class="tracking-result">
+        <p class="empty-state">Informe o protocolo ou o telefone para localizar a solicitação.</p>
+      </div>
+    </section>
+
+    <!-- LISTAGEM E CONSULTA DE CHAMADOS (ADMINISTRATIVO) -->
+    <section id="acompanhamentoAdministrativo" class="section-block hidden">
+      <div class="section-header-flex">
+        <div>
+          <h2 class="section-title">Acompanhamento Administrativo</h2>
+          <p class="section-description">Consulta interna das demandas recentes registradas pela comunidade</p>
         </div>
 
         <div class="table-toolbar">
@@ -406,9 +452,13 @@
   <div id="modalAdminCadastro" class="modal-overlay">
     <div class="modal-card">
       <h3 class="modal-title">Cadastro de Administrador</h3>
-      <p class="modal-desc">Preencha os dados abaixo para criar seu acesso administrativo.</p>
+      <p class="modal-desc">O cadastro é restrito: use o e-mail convidado e o token recebido do administrador principal.</p>
 
       <form id="formAdminCadastro" onsubmit="cadastrarAdministrador(event)">
+        <div class="form-group full-width">
+          <label for="tokenConviteAdmin">Token de convite</label>
+          <input type="text" id="tokenConviteAdmin" class="form-control" placeholder="Cole o token recebido" autocomplete="off">
+        </div>
         <div class="form-group full-width">
           <label for="nomeAdmin">Nome Completo</label>
           <input type="text" id="nomeAdmin" class="form-control" placeholder="Digite seu nome completo" required>
@@ -441,22 +491,56 @@
     </div>
   </div>
 
+  <!-- MODAL DE CONVITES (ADMINISTRADOR PRINCIPAL) -->
+  <div id="modalConvitesAdmin" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title">Convidar Administrador</h3>
+      <p class="modal-desc">Gere um token para um e-mail. Ele vale por 48 horas e só funciona com esse e-mail.</p>
+
+      <form id="formConviteAdmin" onsubmit="gerarConviteAdministrador(event)">
+        <div class="form-group full-width">
+          <label for="emailConviteAdmin">E-mail do convidado</label>
+          <input type="email" id="emailConviteAdmin" class="form-control" placeholder="convidado@exemplo.com" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-key"></i> Gerar token</button>
+        </div>
+      </form>
+
+      <div id="conviteGeradoBox" class="hidden">
+        <p class="modal-desc">Copie agora: o token não será exibido novamente.</p>
+        <div class="protocol-box invite-token" id="conviteGeradoToken"></div>
+        <button type="button" class="btn btn-outline btn-full" onclick="copiarTokenConvite()">
+          <i class="fa-solid fa-copy"></i> Copiar token
+        </button>
+      </div>
+
+      <h4 class="invite-list-title">Convites pendentes</h4>
+      <ul id="listaConvitesPendentes" class="invite-list"></ul>
+
+      <h4 class="invite-list-title">Redefinir senha de administrador</h4>
+      <form id="formRedefinirSenhaAdmin" onsubmit="recuperarSenhaAdministrador(event)">
+        <div class="form-group full-width">
+          <input type="email" id="emailRecuperarAdmin" class="form-control" placeholder="E-mail do administrador" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-outline"><i class="fa-solid fa-rotate"></i> Gerar senha temporária</button>
+        </div>
+      </form>
+
+      <button type="button" class="btn btn-secondary btn-full" onclick="fecharModal('modalConvitesAdmin')">Fechar</button>
+    </div>
+  </div>
+
   <!-- MODAL DE RECUPERAÇÃO DE SENHA DO ADMINISTRADOR -->
   <div id="modalAdminRecuperar" class="modal-overlay">
     <div class="modal-card">
       <h3 class="modal-title">Recuperar Senha</h3>
-      <p class="modal-desc">Informe o e-mail cadastrado para gerar uma nova senha de acesso.</p>
+      <p class="modal-desc">Por segurança, a senha é redefinida pelo administrador principal. Entre em contato com ele e informe o e-mail cadastrado; ele lhe entregará uma senha temporária.</p>
 
-      <form id="formAdminRecuperar" onsubmit="recuperarSenhaAdministrador(event)">
-        <div class="form-group full-width">
-          <label for="emailRecuperarAdmin">E-mail cadastrado</label>
-          <input type="email" id="emailRecuperarAdmin" class="form-control" placeholder="seuemail@exemplo.com" required>
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="fecharModal('modalAdminRecuperar')">Cancelar</button>
-          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Enviar</button>
-        </div>
-      </form>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modalAdminRecuperar')">Fechar</button>
+      </div>
 
       <p class="modal-switch-text">
         Lembrou a senha? <a href="#" onclick="trocarModalAdmin(event, 'modalAdminRecuperar', 'modalAdminLogin')">Voltar ao login</a>

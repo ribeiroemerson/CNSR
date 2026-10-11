@@ -40,3 +40,9 @@ services:
         value: production
       - key: CORS_ORIGIN
         value: "*"
+      - key: ADMIN_PRINCIPAL_EMAIL
+        value: lelekoe@gmail.com
+      - key: GMAIL_USER
+        value: lelekoe@gmail.com
+      - key: GMAIL_APP_PASSWORD
+        sync: false

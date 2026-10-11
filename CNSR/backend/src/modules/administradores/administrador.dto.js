@@ -7,12 +7,18 @@ const cadastrarAdministradorSchema = z
     email: z.string().trim().email("Informe um e-mail válido."),
     usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres."),
     senha: z.string().min(6, "A senha deve ter ao menos 6 caracteres."),
-    confirmarSenha: z.string()
+    confirmarSenha: z.string(),
+    tokenConvite: z.string().trim().min(1).optional()
   })
   .refine(dados => dados.senha === dados.confirmarSenha, {
     message: "As senhas informadas não conferem.",
     path: ["confirmarSenha"]
   });
+
+// DTO de entrada: convite de novo administrador para um e-mail
+const criarConviteSchema = z.object({
+  email: z.string().trim().email("Informe um e-mail válido.")
+});
 
 // DTO de entrada: autenticação
 const loginAdministradorSchema = z.object({
@@ -38,12 +44,25 @@ function paraSaidaAdministrador(administrador) {
     nomeCompleto: administrador.nomeCompleto,
     email: administrador.email,
     usuario: administrador.usuario,
+    principal: administrador.principal,
     dataCadastro: administrador.dataCadastro
+  };
+}
+
+// DTO de saída: nunca expõe o hash do token do convite
+function paraSaidaConvite(convite) {
+  return {
+    id: convite.id,
+    email: convite.email,
+    expiraEm: convite.expiraEm,
+    criadoEm: convite.criadoEm
   };
 }
 
 module.exports = {
   cadastrarAdministradorSchema,
+  criarConviteSchema,
+  paraSaidaConvite,
   loginAdministradorSchema,
   recuperarSenhaSchema,
   atualizarAdministradorSchema,

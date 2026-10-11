@@ -33,10 +33,29 @@ model Administrador {
   email        String    @unique
   usuario      String    @unique
   senhaHash    String
+  principal    Boolean   @default(false)
   dataCadastro DateTime  @default(now())
   noticias     Noticia[]
+  convites     ConviteAdministrador[]
 
   @@map("administradores")
+}
+
+// Convite emitido pelo administrador principal para um e-mail específico.
+// Só o hash SHA-256 do token é armazenado; o token em si é exibido uma única vez.
+model ConviteAdministrador {
+  id        Int       @id @default(autoincrement())
+  email     String
+  tokenHash String    @unique
+  expiraEm  DateTime
+  usadoEm   DateTime?
+  criadoEm  DateTime  @default(now())
+
+  criadoPorId   Int
+  criadoPor     Administrador @relation(fields: [criadoPorId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@map("convites_administrador")
 }
 
 // Solicitação registrada por um cidadão (com ou sem cadastro prévio)

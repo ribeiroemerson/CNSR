@@ -147,6 +147,29 @@ async function carregarNoticias() {
 // ATIVAÇÃO DO BOTÃO "+ NOVA SOLICITAÇÃO"
 // ==========================================
 
+function aplicarMascaraTelefone(input) {
+  if (!input) return;
+
+  let valor = input.value.replace(/\D/g, "").slice(0, 11);
+
+  if (valor.length <= 2) {
+    valor = valor.replace(/(\d{1,2})/, "($1");
+  } else if (valor.length <= 7) {
+    valor = valor.replace(/(\d{2})(\d+)/, "($1) $2");
+  } else {
+    valor = valor.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+  }
+
+  input.value = valor;
+}
+
+function aplicarMascaraProtocolo(input) {
+  if (!input) return;
+
+  const valor = input.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  input.value = valor;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   // Captura o botão pelo ID ou pela classe e ícone
   const btnNovaSolicitacao = document.getElementById("btnNovoChamado") || 
@@ -158,6 +181,63 @@ document.addEventListener("DOMContentLoaded", () => {
       ativarNovaSolicitacao();
     });
   }
+
+  const inputTelefoneUsuario = document.getElementById("inputBuscaTelefoneUsuario");
+  if (inputTelefoneUsuario) {
+    inputTelefoneUsuario.addEventListener("input", () => aplicarMascaraTelefone(inputTelefoneUsuario));
+  }
+
+  const inputProtocoloUsuario = document.getElementById("inputBuscaProtocoloUsuario");
+  if (inputProtocoloUsuario) {
+    inputProtocoloUsuario.addEventListener("input", () => aplicarMascaraProtocolo(inputProtocoloUsuario));
+  }
+
+  const btnConsultarChamado = document.getElementById("btnConsultarProtocolo");
+  if (btnConsultarChamado) {
+    btnConsultarChamado.addEventListener("click", () => {
+      const secaoConsulta = document.querySelector(".user-tracking-section");
+      const campoProtocolo = document.getElementById("inputBuscaProtocoloUsuario");
+      const campoTelefone = document.getElementById("inputBuscaTelefoneUsuario");
+
+      if (secaoConsulta) {
+        secaoConsulta.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      if (campoProtocolo) {
+        setTimeout(() => {
+          campoProtocolo.focus();
+          campoProtocolo.value = "";
+          mostrarMensagemAcompanhamentoUsuario();
+        }, 250);
+      } else if (campoTelefone) {
+        setTimeout(() => {
+          campoTelefone.focus();
+          campoTelefone.value = "";
+          mostrarMensagemAcompanhamentoUsuario();
+        }, 250);
+      }
+    });
+  }
+
+  const btnConsultarUsuario = document.getElementById("btnConsultarSolicitacaoUsuario");
+  if (btnConsultarUsuario) {
+    btnConsultarUsuario.addEventListener("click", consultarSolicitacaoUsuario);
+  }
+
+  mostrarMensagemAcompanhamentoUsuario();
+
+  const camposConsultaUsuario = [
+    document.getElementById("inputBuscaProtocoloUsuario"),
+    document.getElementById("inputBuscaTelefoneUsuario")
+  ].filter(Boolean);
+
+  camposConsultaUsuario.forEach(campo => {
+    campo.addEventListener("keydown", (evento) => {
+      if (evento.key === "Enter") {
+        consultarSolicitacaoUsuario();
+      }
+    });
+  });
 });
 
 // Função responsável por conduzir o usuário ao formulário
@@ -264,6 +344,7 @@ async function cadastrarAdministrador(event) {
   const usuario = document.getElementById("usuarioAdmin").value.trim();
   const senha = document.getElementById("senhaAdmin").value;
   const confirmarSenha = document.getElementById("confirmarSenhaAdmin").value;
+  const tokenConvite = document.getElementById("tokenConviteAdmin").value.trim();
 
   if (senha !== confirmarSenha) {
     alert("As senhas informadas não conferem.");
@@ -273,7 +354,7 @@ async function cadastrarAdministrador(event) {
   try {
     await apiFetch("/administradores", {
       method: "POST",
-      body: JSON.stringify({ nomeCompleto, email, usuario, senha, confirmarSenha })
+      body: JSON.stringify({ nomeCompleto, email, usuario, senha, confirmarSenha, ...(tokenConvite && { tokenConvite }) })
     });
 
     document.getElementById("formAdminCadastro").reset();
@@ -318,24 +399,24 @@ function sairAdministrador() {
   carregarNoticias();
 }
 
-// Solicita à API uma senha temporária para o e-mail cadastrado
+// Administrador principal gera senha temporária para outro administrador
 async function recuperarSenhaAdministrador(event) {
   event.preventDefault();
 
   const email = document.getElementById("emailRecuperarAdmin").value.trim();
 
   try {
-    const { senhaTemporaria } = await apiFetch("/administradores/recuperar-senha", {
+    const resposta = await apiFetch("/administradores/recuperar-senha", {
       method: "POST",
       body: JSON.stringify({ email })
     });
 
-    document.getElementById("formAdminRecuperar").reset();
-    alert(
-      `Este sistema não possui envio real de e-mail. Sua senha temporária é: ${senhaTemporaria}\n\n` +
-      "Utilize-a para entrar e, se desejar, cadastre uma nova senha."
-    );
-    trocarModalAdmin(null, "modalAdminRecuperar", "modalAdminLogin");
+    document.getElementById("formRedefinirSenhaAdmin").reset();
+    if (resposta.enviado) {
+      alert(`Senha temporária enviada por e-mail para ${email}.`);
+    } else {
+      alert(`Senha temporária de ${email}: ${resposta.senhaTemporaria}\n\nEntregue-a por um canal seguro. Ela não será exibida novamente.`);
+    }
   } catch (erro) {
     alert(erro.message);
   }
@@ -348,6 +429,81 @@ function trocarModalAdmin(event, idAtual, idDestino) {
   abrirModal(idDestino);
 }
 
+// ==========================================
+// CONVITES DE ADMINISTRADOR (ADMINISTRADOR PRINCIPAL)
+// ==========================================
+
+async function abrirModalConvites() {
+  document.getElementById("conviteGeradoBox").classList.add("hidden");
+  document.getElementById("formConviteAdmin").reset();
+  abrirModal("modalConvitesAdmin");
+  await carregarConvitesPendentes();
+}
+
+async function carregarConvitesPendentes() {
+  const lista = document.getElementById("listaConvitesPendentes");
+  try {
+    const convites = await apiFetch("/administradores/convites");
+    lista.innerHTML = convites.length
+      ? convites.map(convite => `
+          <li>
+            <span>${escaparHtml(convite.email)} &middot; expira em ${new Date(convite.expiraEm).toLocaleString("pt-BR")}</span>
+            <button type="button" class="btn-text" onclick="revogarConviteAdministrador(${convite.id})" title="Revogar convite">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </li>`).join("")
+      : "<li>Nenhum convite pendente.</li>";
+  } catch (erro) {
+    lista.innerHTML = `<li>${escaparHtml(erro.message)}</li>`;
+  }
+}
+
+async function gerarConviteAdministrador(event) {
+  event.preventDefault();
+  const email = document.getElementById("emailConviteAdmin").value.trim();
+
+  try {
+    const convite = await apiFetch("/administradores/convites", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    });
+
+    const boxToken = document.getElementById("conviteGeradoBox");
+    if (convite.enviado) {
+      boxToken.classList.add("hidden");
+      alert(`Convite enviado por e-mail para ${email}.`);
+    } else {
+      document.getElementById("conviteGeradoToken").textContent = convite.token;
+      boxToken.classList.remove("hidden");
+    }
+    document.getElementById("formConviteAdmin").reset();
+    await carregarConvitesPendentes();
+  } catch (erro) {
+    alert(erro.message);
+  }
+}
+
+async function revogarConviteAdministrador(id) {
+  if (!confirm("Deseja revogar este convite?")) return;
+
+  try {
+    await apiFetch(`/administradores/convites/${id}`, { method: "DELETE" });
+    await carregarConvitesPendentes();
+  } catch (erro) {
+    alert(erro.message);
+  }
+}
+
+async function copiarTokenConvite() {
+  const token = document.getElementById("conviteGeradoToken").textContent;
+  try {
+    await navigator.clipboard.writeText(token);
+    alert("Token copiado.");
+  } catch {
+    alert("Não foi possível copiar automaticamente. Selecione o token e copie manualmente.");
+  }
+}
+
 // Atualiza o cabeçalho conforme o estado da sessão administrativa
 function atualizarInterfaceAdmin() {
   const perfil = obterAdminPerfil();
@@ -355,6 +511,8 @@ function atualizarInterfaceAdmin() {
   const badgeSessao = document.getElementById("adminSessaoBadge");
   const nomeSessao = document.getElementById("adminSessaoNome");
   const btnNovaNoticia = document.getElementById("btnNovaNoticia");
+  const btnConvidarAdmin = document.getElementById("btnConvidarAdmin");
+  const acompanhamentoAdministrativo = document.getElementById("acompanhamentoAdministrativo");
   const botoesRelatorio = [
     document.getElementById("btnImprimirRelatorioChamados"),
     document.getElementById("btnBaixarRelatorioChamados")
@@ -365,12 +523,28 @@ function atualizarInterfaceAdmin() {
     if (badgeSessao) badgeSessao.classList.remove("hidden");
     if (nomeSessao) nomeSessao.textContent = `Olá, ${perfil.nomeCompleto.split(" ")[0]}`;
     if (btnNovaNoticia) btnNovaNoticia.classList.remove("hidden");
+    if (btnConvidarAdmin) btnConvidarAdmin.classList.toggle("hidden", !perfil.principal);
+    if (acompanhamentoAdministrativo) acompanhamentoAdministrativo.classList.remove("hidden");
     botoesRelatorio.forEach(botao => botao?.classList.remove("hidden"));
   } else {
     if (btnAreaAdmin) btnAreaAdmin.classList.remove("hidden");
     if (badgeSessao) badgeSessao.classList.add("hidden");
     if (btnNovaNoticia) btnNovaNoticia.classList.add("hidden");
+    if (btnConvidarAdmin) btnConvidarAdmin.classList.add("hidden");
+    if (acompanhamentoAdministrativo) acompanhamentoAdministrativo.classList.add("hidden");
     botoesRelatorio.forEach(botao => botao?.classList.add("hidden"));
+  }
+}
+
+function mostrarMensagemAcompanhamentoUsuario() {
+  const resultado = document.getElementById("resultadoConsultaUsuario");
+  if (!resultado) return;
+
+  const protocolo = document.getElementById("inputBuscaProtocoloUsuario")?.value.trim();
+  const telefone = document.getElementById("inputBuscaTelefoneUsuario")?.value.trim();
+
+  if (!protocolo && !telefone) {
+    resultado.innerHTML = '<p class="empty-state">Use o número do protocolo ou telefone para consultar sua solicitação.</p>';
   }
 }
 
@@ -609,6 +783,258 @@ function gerarRelatorioChamadosPDF() {
   });
 
   documentoPdf.save(`relatorio-solicitacoes-${Date.now()}.pdf`);
+}
+
+function normalizarConsulta(texto) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toLowerCase();
+}
+
+function obterChamadosPorConsultaUsuario() {
+  const protocoloDigitado = document.getElementById("inputBuscaProtocoloUsuario")?.value.trim() || "";
+  const telefoneDigitado = document.getElementById("inputBuscaTelefoneUsuario")?.value.trim() || "";
+
+  const protocoloNormalizado = normalizarConsulta(protocoloDigitado);
+  const telefoneNormalizado = normalizarConsulta(telefoneDigitado);
+
+  if (!protocoloNormalizado && !telefoneNormalizado) {
+    return [];
+  }
+
+  return chamadosCache.filter(chamado => {
+    const protocoloMatch = !protocoloNormalizado || normalizarConsulta(chamado.protocolo).includes(protocoloNormalizado);
+    const telefoneMatch = !telefoneNormalizado || normalizarConsulta(chamado.telefone).includes(telefoneNormalizado);
+    return protocoloMatch && telefoneMatch;
+  });
+}
+
+function montarHtmlResultadoConsultaUsuario(lista) {
+  if (!lista.length) {
+    return `<p class="empty-state">Nenhuma solicitação foi encontrada para os dados informados.</p>`;
+  }
+
+  return `
+    <div class="user-result-grid">
+      ${lista.map(chamado => {
+        const infoStatus = STATUS_INFO[chamado.status] || STATUS_INFO.PENDENTE;
+        return `
+          <article class="user-result-card">
+            <div class="result-header">
+              <span class="protocol-tag">${escaparHtml(chamado.protocolo)}</span>
+              <span class="status-badge ${infoStatus.classe}">${infoStatus.label}</span>
+            </div>
+            <ul>
+              <li><strong>Solicitante:</strong> ${escaparHtml(chamado.nome)}</li>
+              <li><strong>Telefone:</strong> ${escaparHtml(chamado.telefone)}</li>
+              <li><strong>Categoria:</strong> ${escaparHtml(chamado.categoria)}</li>
+              <li><strong>Bairro:</strong> ${escaparHtml(chamado.bairro)}</li>
+              <li><strong>Data:</strong> ${formatarData(chamado.criadoEm)}</li>
+            </ul>
+            <div class="description-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="imprimirConsultaUsuarioItem(${chamado.id})">
+                <i class="fa-solid fa-print"></i> Imprimir
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="gerarConsultaUsuarioPDFItem(${chamado.id})">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+            </div>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function consultarSolicitacaoUsuario() {
+  const lista = obterChamadosPorConsultaUsuario();
+  const resultado = document.getElementById("resultadoConsultaUsuario");
+
+  if (!resultado) return;
+
+  if (!lista.length && (!document.getElementById("inputBuscaProtocoloUsuario")?.value.trim() && !document.getElementById("inputBuscaTelefoneUsuario")?.value.trim())) {
+    mostrarMensagemAcompanhamentoUsuario();
+    return;
+  }
+
+  resultado.innerHTML = montarHtmlResultadoConsultaUsuario(lista);
+}
+
+function imprimirConsultaUsuario() {
+  const lista = obterChamadosPorConsultaUsuario();
+  if (!lista.length) {
+    alert("Nenhuma solicitação encontrada para os critérios informados.");
+    return;
+  }
+
+  const janelaImpressao = window.open("", "_blank", "width=900,height=700");
+  if (!janelaImpressao) {
+    alert("Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-ups.");
+    return;
+  }
+
+  const linhas = lista.map(chamado => `
+    <tr>
+      <td>${escaparHtml(chamado.protocolo)}</td>
+      <td>${escaparHtml(chamado.nome)}</td>
+      <td>${escaparHtml(chamado.telefone)}</td>
+      <td>${escaparHtml(chamado.categoria)}</td>
+      <td>${escaparHtml(chamado.bairro)}</td>
+      <td>${escaparHtml(STATUS_INFO[chamado.status]?.label || chamado.status)}</td>
+    </tr>
+  `).join("");
+
+  janelaImpressao.document.write(`
+    <html>
+      <head>
+        <title>Consulta de Solicitações</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 2rem; color: #0f172a; }
+          h1 { font-size: 1.3rem; margin-bottom: 1rem; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #e2e8f0; padding: 0.5rem; text-align: left; font-size: 0.85rem; }
+          th { background-color: #f8fafc; }
+        </style>
+      </head>
+      <body onload="window.print()">
+        <h1>Consulta de Solicitações</h1>
+        <table>
+          <thead>
+            <tr>
+              <th>Protocolo</th>
+              <th>Solicitante</th>
+              <th>Telefone</th>
+              <th>Categoria</th>
+              <th>Bairro</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  janelaImpressao.document.close();
+}
+
+function gerarConsultaUsuarioPDF() {
+  const lista = obterChamadosPorConsultaUsuario();
+  if (!lista.length) {
+    alert("Nenhuma solicitação encontrada para os critérios informados.");
+    return;
+  }
+
+  if (!window.jspdf) {
+    alert("Não foi possível carregar o gerador de PDF. Verifique sua conexão com a internet.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const documentoPdf = new jsPDF();
+  documentoPdf.setFontSize(16);
+  documentoPdf.text("Consulta de Solicitações", 14, 18);
+  documentoPdf.setFontSize(10);
+  documentoPdf.setTextColor(100);
+  documentoPdf.text("Conecta Nova Santa Rita", 14, 25);
+
+  const linhas = lista.map(chamado => [
+    chamado.protocolo,
+    chamado.nome,
+    chamado.telefone,
+    chamado.categoria,
+    chamado.bairro,
+    STATUS_INFO[chamado.status]?.label || chamado.status
+  ]);
+
+  documentoPdf.autoTable({
+    head: [["Protocolo", "Solicitante", "Telefone", "Categoria", "Bairro", "Status"]],
+    body: linhas,
+    startY: 32,
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [2, 132, 199], textColor: 255 },
+    alternateRowStyles: { fillColor: [248, 250, 252] }
+  });
+
+  documentoPdf.save(`consulta-solicitacoes-${Date.now()}.pdf`);
+}
+
+function imprimirConsultaUsuarioItem(id) {
+  const chamado = obterChamadoPorId(id);
+  if (!chamado) return;
+
+  const janelaImpressao = window.open("", "_blank", "width=700,height=800");
+  if (!janelaImpressao) {
+    alert("Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-ups.");
+    return;
+  }
+
+  const conteudo = [
+    ["Protocolo", chamado.protocolo],
+    ["Solicitante", chamado.nome],
+    ["Telefone", chamado.telefone],
+    ["Categoria", chamado.categoria],
+    ["Bairro/Localidade", chamado.bairro],
+    ["Status", STATUS_INFO[chamado.status]?.label || chamado.status],
+    ["Data de abertura", formatarData(chamado.criadoEm)],
+    ["Descrição", chamado.descricao || "Descrição não informada."]
+  ].map(([rotulo, valor]) => `<section><strong>${escaparHtml(rotulo)}</strong><p>${escaparHtml(valor)}</p></section>`).join("");
+
+  janelaImpressao.document.write(`
+    <html>
+      <head>
+        <title>Solicitação ${escaparHtml(chamado.protocolo)}</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 2rem; color: #0f172a; }
+          section { margin-bottom: 1rem; }
+          strong { display: block; margin-bottom: 0.25rem; }
+          p { margin: 0; white-space: pre-wrap; }
+        </style>
+      </head>
+      <body onload="window.print()">
+        <h1>Detalhes da solicitação</h1>
+        ${conteudo}
+      </body>
+    </html>
+  `);
+  janelaImpressao.document.close();
+}
+
+function gerarConsultaUsuarioPDFItem(id) {
+  const chamado = obterChamadoPorId(id);
+  if (!chamado) return;
+
+  if (!window.jspdf) {
+    alert("Não foi possível carregar o gerador de PDF. Verifique sua conexão com a internet.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const documentoPdf = new jsPDF();
+  documentoPdf.setFontSize(16);
+  documentoPdf.text("Detalhes da Solicitação", 14, 18);
+  documentoPdf.setFontSize(10);
+  documentoPdf.text("Conecta Nova Santa Rita", 14, 28);
+
+  documentoPdf.autoTable({
+    startY: 36,
+    body: [
+      ["Protocolo", chamado.protocolo],
+      ["Solicitante", chamado.nome],
+      ["Telefone", chamado.telefone],
+      ["Categoria", chamado.categoria],
+      ["Bairro/Localidade", chamado.bairro],
+      ["Status", STATUS_INFO[chamado.status]?.label || chamado.status],
+      ["Data de abertura", formatarData(chamado.criadoEm)],
+      ["Descrição", chamado.descricao || "Descrição não informada."]
+    ],
+    styles: { fontSize: 9, cellPadding: 2, overflow: "linebreak" },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 50 }, 1: { cellWidth: "auto" } },
+    theme: "grid"
+  });
+
+  documentoPdf.save(`solicitacao-${String(chamado.protocolo).replace(/[^a-zA-Z0-9-]/g, "-")}.pdf`);
 }
 
 function obterChamadoPorId(id) {
