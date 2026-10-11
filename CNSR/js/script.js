@@ -422,6 +422,14 @@ async function recuperarSenhaAdministrador(event) {
   }
 }
 
+function alternarVisibilidadeSenha(idCampo, botao) {
+  const campo = document.getElementById(idCampo);
+  const mostrar = campo.type === "password";
+  campo.type = mostrar ? "text" : "password";
+  botao.setAttribute("aria-label", mostrar ? "Ocultar senha" : "Mostrar senha");
+  botao.querySelector("i").className = mostrar ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
+}
+
 // Alterna entre os modais de login, cadastro e recuperação de senha
 function trocarModalAdmin(event, idAtual, idDestino) {
   if (event) event.preventDefault();

@@ -807,6 +807,32 @@ body {
   display: none !important;
 }
 
+/* CAMPO DE SENHA COM OLHO */
+.password-field {
+  position: relative;
+}
+
+.password-field .form-control {
+  padding-right: 2.75rem;
+}
+
+.toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 1rem;
+  padding: 0.25rem;
+}
+
+.toggle-password:hover {
+  color: #111827;
+}
+
 /* CONVITES DE ADMINISTRADOR */
 .invite-token {
   font-size: 0.95rem;
