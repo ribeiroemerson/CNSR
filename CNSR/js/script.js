@@ -83,11 +83,6 @@ function removerChamadoApi(id) {
   return apiFetch(`/chamados/${id}`, { method: "DELETE" });
 }
 
-// Busca a lista de cidadãos cadastrados (restrito a administradores)
-function listarUsuariosApi() {
-  return apiFetch("/usuarios");
-}
-
 // Recarrega os chamados do backend e atualiza tabela e estatísticas
 async function carregarChamados() {
   try {
@@ -279,34 +274,18 @@ const CATEGORIAS_SERVICO = [
 ];
 
 // Recalcula e atualiza os cards de estatística com base nos dados reais da API
-async function atualizarEstatisticas() {
+function atualizarEstatisticas() {
   const totalChamados = chamadosCache.length;
   const concluidos = chamadosCache.filter(c => c.status === "CONCLUIDO").length;
   const taxaResolucao = totalChamados > 0 ? Math.round((concluidos / totalChamados) * 100) : 0;
 
   const elTotalChamados = document.getElementById("totalChamados");
   const elTaxaResolucao = document.getElementById("taxaResolucao");
-  const elTotalCidadaos = document.getElementById("totalCidadaos");
   const elTotalSecretarias = document.getElementById("totalSecretarias");
 
   if (elTotalChamados) elTotalChamados.textContent = totalChamados.toLocaleString("pt-BR");
   if (elTaxaResolucao) elTaxaResolucao.textContent = `${taxaResolucao}%`;
   if (elTotalSecretarias) elTotalSecretarias.textContent = CATEGORIAS_SERVICO.length;
-
-  if (!elTotalCidadaos) return;
-
-  // A listagem de cidadãos exige autenticação; visitantes anônimos não têm acesso a essa contagem
-  if (!administradorLogado()) {
-    elTotalCidadaos.textContent = "—";
-    return;
-  }
-
-  try {
-    const usuarios = await listarUsuariosApi();
-    elTotalCidadaos.textContent = usuarios.length.toLocaleString("pt-BR");
-  } catch (erro) {
-    elTotalCidadaos.textContent = "—";
-  }
 }
 
 // ==========================================
