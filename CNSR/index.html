@@ -476,11 +476,17 @@
         </div>
         <div class="form-group full-width">
           <label for="senhaAdmin">Senha</label>
-          <input type="password" id="senhaAdmin" class="form-control" placeholder="Crie uma senha (mín. 6 caracteres)" required minlength="6">
+          <div class="password-field">
+            <input type="password" id="senhaAdmin" class="form-control" placeholder="Crie uma senha (mín. 6 caracteres)" required minlength="6">
+            <button type="button" class="toggle-password" onclick="alternarVisibilidadeSenha('senhaAdmin', this)" aria-label="Mostrar senha"><i class="fa-solid fa-eye"></i></button>
+          </div>
         </div>
         <div class="form-group full-width">
           <label for="confirmarSenhaAdmin">Confirmar Senha</label>
-          <input type="password" id="confirmarSenhaAdmin" class="form-control" placeholder="Repita a senha" required minlength="6">
+          <div class="password-field">
+            <input type="password" id="confirmarSenhaAdmin" class="form-control" placeholder="Repita a senha" required minlength="6">
+            <button type="button" class="toggle-password" onclick="alternarVisibilidadeSenha('confirmarSenhaAdmin', this)" aria-label="Mostrar senha"><i class="fa-solid fa-eye"></i></button>
+          </div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="fecharModal('modalAdminCadastro')">Cancelar</button>
