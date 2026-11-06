@@ -92,6 +92,7 @@ module.exports = {
   buscarPorEmail,
   buscarPorUsuarioOuEmail,
   buscarPorEmailSemCaixa,
+  existePrincipal,
 
   buscarConvitePorTokenHash,
   criarConvite,
