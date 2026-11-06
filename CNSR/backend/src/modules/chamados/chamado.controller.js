@@ -22,6 +22,11 @@ const buscarPorProtocolo = asyncHandler(async (req, res) => {
   res.json(paraSaidaChamado(chamado));
 });
 
+const buscarPorTelefone = asyncHandler(async (req, res) => {
+  const chamados = await service.buscarChamadosPorTelefone(req.body.telefone);
+  res.set("Cache-Control", "no-store").json(chamados.map(paraSaidaChamado));
+});
+
 const atualizarStatus = asyncHandler(async (req, res) => {
   const chamado = await service.atualizarStatusChamado(Number(req.params.id), req.body.status, req.administrador);
   res.json(paraSaidaChamado(chamado));
@@ -36,4 +41,4 @@ const estatisticas = asyncHandler(async (_req, res) => {
   res.json(await service.estatisticas());
 });
 
-module.exports = { criar, listar, buscarPorId, buscarPorProtocolo, atualizarStatus, remover, estatisticas };
+module.exports = { criar, listar, buscarPorId, buscarPorProtocolo, buscarPorTelefone, atualizarStatus, remover, estatisticas };

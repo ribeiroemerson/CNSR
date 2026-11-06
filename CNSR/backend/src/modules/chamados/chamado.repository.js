@@ -24,6 +24,14 @@ function buscarPorProtocolo(protocolo) {
   return prisma.chamado.findUnique({ where: { protocolo } });
 }
 
+function buscarPorTelefone(telefone) {
+  return prisma.$queryRaw`
+    SELECT * FROM "chamados"
+    WHERE regexp_replace("telefone", '[^0-9]', '', 'g') = ${telefone}
+    ORDER BY "criadoEm" DESC
+  `;
+}
+
 function atualizarStatus(id, status, categoria) {
   return prisma.chamado.updateMany({ where: { id, ...(categoria && { categoria }) }, data: { status } });
 }
@@ -45,6 +53,7 @@ module.exports = {
   listarTodos,
   buscarPorId,
   buscarPorProtocolo,
+  buscarPorTelefone,
   atualizarStatus,
   remover,
   estatisticas

@@ -205,6 +205,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const inputTelefoneUsuario = document.getElementById("inputBuscaTelefoneUsuario");
+  if (inputTelefoneUsuario) {
+    inputTelefoneUsuario.addEventListener("input", () => {
+      aplicarMascaraTelefone(inputTelefoneUsuario);
+      limparConsultaUsuario();
+    });
+  }
+
   const btnConsultarChamado = document.getElementById("btnConsultarProtocolo");
   if (btnConsultarChamado) {
     btnConsultarChamado.addEventListener("click", () => {
@@ -219,6 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
           campoProtocolo.focus();
           campoProtocolo.value = "";
+          if (inputTelefoneUsuario) inputTelefoneUsuario.value = "";
           limparConsultaUsuario();
         }, 250);
       }
@@ -233,7 +242,8 @@ document.addEventListener("DOMContentLoaded", () => {
   mostrarMensagemAcompanhamentoUsuario();
 
   const camposConsultaUsuario = [
-    document.getElementById("inputBuscaProtocoloUsuario")
+    document.getElementById("inputBuscaProtocoloUsuario"),
+    document.getElementById("inputBuscaTelefoneUsuario")
   ].filter(Boolean);
 
   camposConsultaUsuario.forEach(campo => {
@@ -807,17 +817,13 @@ function mostrarMensagemAcompanhamentoUsuario() {
   const resultado = document.getElementById("resultadoConsultaUsuario");
   if (!resultado) return;
 
-  const protocolo = document.getElementById("inputBuscaProtocoloUsuario")?.value.trim();
-  if (!protocolo) {
-    resultado.innerHTML = '<p class="empty-state">Use o número completo do protocolo para consultar sua solicitação.</p>';
-  }
+  resultado.innerHTML = '<p class="empty-state">Informe o protocolo completo ou o telefone com DDD para localizar solicitações.</p>';
 }
 
 function limparConsultaUsuario() {
   ++versaoConsultaUsuario;
   consultaUsuarioCache = [];
-  const resultado = document.getElementById("resultadoConsultaUsuario");
-  resultado.innerHTML = '<p class="empty-state">Use o número completo do protocolo para consultar sua solicitação.</p>';
+  mostrarMensagemAcompanhamentoUsuario();
 }
 
 // ==========================================
@@ -1110,17 +1116,22 @@ function montarHtmlResultadoConsultaUsuario(lista) {
 async function consultarSolicitacaoUsuario() {
   const versao = ++versaoConsultaUsuario;
   const protocolo = document.getElementById("inputBuscaProtocoloUsuario").value.trim();
+  const telefone = document.getElementById("inputBuscaTelefoneUsuario").value.trim();
   const resultado = document.getElementById("resultadoConsultaUsuario");
   consultaUsuarioCache = [];
-  if (!protocolo) {
+  if (!protocolo && !telefone) {
     mostrarMensagemAcompanhamentoUsuario();
     return;
   }
   resultado.textContent = "Consultando solicitação...";
   try {
-    const chamado = await apiFetch(`/chamados/protocolo/${encodeURIComponent(protocolo)}`);
+    const chamados = telefone
+      ? await apiFetch("/chamados/consulta-telefone", { method: "POST", body: JSON.stringify({ telefone }) })
+      : [await apiFetch(`/chamados/protocolo/${encodeURIComponent(protocolo)}`)];
     if (versao !== versaoConsultaUsuario) return;
-    consultaUsuarioCache = [chamado];
+    consultaUsuarioCache = protocolo && telefone
+      ? chamados.filter(chamado => chamado.protocolo.toUpperCase() === protocolo.toUpperCase())
+      : chamados;
     resultado.innerHTML = montarHtmlResultadoConsultaUsuario(consultaUsuarioCache);
   } catch (erro) {
     if (versao !== versaoConsultaUsuario) return;

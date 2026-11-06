@@ -33,6 +33,14 @@ const atualizarStatusChamadoSchema = z.object({
   status: z.enum(STATUS_VALIDOS, { errorMap: () => ({ message: "Status inválido." }) })
 });
 
+const consultaTelefoneSchema = z.object({
+  telefone: z.string()
+    .trim()
+    .regex(/^[\d\s()-]+$/, "Informe um telefone válido com DDD.")
+    .transform(telefone => telefone.replace(/\D/g, ""))
+    .refine(telefone => /^\d{10,11}$/.test(telefone), "Informe o telefone completo com DDD.")
+});
+
 // DTO de saída: formato exposto pela API
 function paraSaidaChamado(chamado) {
   return {
@@ -56,5 +64,6 @@ module.exports = {
   STATUS_VALIDOS,
   criarChamadoSchema,
   atualizarStatusChamadoSchema,
+  consultaTelefoneSchema,
   paraSaidaChamado
 };

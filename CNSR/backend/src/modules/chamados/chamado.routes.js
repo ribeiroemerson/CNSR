@@ -1,10 +1,18 @@
 const { Router } = require("express");
+const rateLimit = require("express-rate-limit");
 const controller = require("./chamado.controller");
 const { validate } = require("../../middlewares/validate");
 const { autenticar } = require("../../middlewares/auth");
-const { criarChamadoSchema, atualizarStatusChamadoSchema } = require("./chamado.dto");
+const { criarChamadoSchema, atualizarStatusChamadoSchema, consultaTelefoneSchema } = require("./chamado.dto");
 
 const router = Router();
+const limitarConsultaTelefone = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { mensagem: "Muitas consultas por telefone. Tente novamente em alguns minutos." }
+});
 
 /**
  * @openapi
@@ -98,6 +106,39 @@ router.get("/estatisticas", controller.estatisticas);
  *               $ref: '#/components/schemas/Erro'
  */
 router.get("/protocolo/:protocolo", controller.buscarPorProtocolo);
+
+/**
+ * @openapi
+ * /chamados/consulta-telefone:
+ *   post:
+ *     summary: Consulta solicitações pelo telefone completo com DDD
+ *     tags: [Chamados]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [telefone]
+ *             properties:
+ *               telefone:
+ *                 type: string
+ *                 example: "(86) 99999-1234"
+ *     responses:
+ *       200:
+ *         description: Chamados com o telefone informado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Chamado'
+ *       400:
+ *         description: Telefone inválido ou incompleto
+ *       429:
+ *         description: Limite de consultas excedido
+ */
+router.post("/consulta-telefone", limitarConsultaTelefone, validate(consultaTelefoneSchema), controller.buscarPorTelefone);
 
 /**
  * @openapi

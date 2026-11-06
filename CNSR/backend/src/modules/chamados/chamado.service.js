@@ -44,6 +44,7 @@ module.exports = {
   listarChamados,
   buscarChamadoPorId,
   buscarChamadoPorProtocolo,
+  buscarChamadosPorTelefone: repository.buscarPorTelefone,
   atualizarStatusChamado,
   removerChamado,
   estatisticas: repository.estatisticas
