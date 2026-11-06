@@ -32,10 +32,9 @@ describe("Chamados", () => {
     protocoloCriado = resposta.body.protocolo;
   });
 
-  it("deve listar os chamados cadastrados", async () => {
+  it("deve exigir autenticação para listar chamados", async () => {
     const resposta = await request(app).get("/api/chamados");
-    expect(resposta.status).toBe(200);
-    expect(Array.isArray(resposta.body)).toBe(true);
+    expect(resposta.status).toBe(401);
   });
 
   it("deve bloquear alteração de status sem autenticação", async () => {

@@ -14,6 +14,8 @@ API REST em Node.js/Express para o projeto **Conecta Nova Santa Rita**, com pers
 > **Envio por Gmail (opcional):** defina `GMAIL_USER` e `GMAIL_APP_PASSWORD` (uma "Senha de app" da conta Google, com verificação em 2 etapas — nunca a senha normal). O token de convite e a senha temporária são enviados por e-mail quando possível. O token de um convite pendente pode ser consultado pelo principal após confirmar sua senha, mesmo que o e-mail tenha sido enviado. Se o envio da senha temporária falhar, ela só é devolvida após a confirmação da senha do principal.
 >
 > **Cadastro de administradores:** é restrito. O e-mail definido em `ADMIN_PRINCIPAL_EMAIL` pode criar o primeiro administrador (principal) sem token. Depois, só o principal gera convites (`POST /api/administradores/convites`); o token é de uso único, vale 48h e só funciona com o e-mail convidado. O banco guarda apenas o hash e um valor aleatório que permite regenerar o token usando o `JWT_SECRET` mantido fora do banco. A alteração de `JWT_SECRET` invalida a visualização dos tokens pendentes; convites anteriores a esta mudança também não são recuperáveis e precisam ser gerados novamente. Aplique a migration com `npm run db:deploy`.
+>
+> **Secretarias e chamados:** cada categoria de serviço corresponde a uma secretaria. No cadastro, escolha uma secretaria; o principal pode alterar esse vínculo na gestão de administradores. Contas já existentes sem secretaria não podem acessar chamados administrativamente até que o principal faça o vínculo. O principal acessa todas as categorias. A listagem, consulta por ID, alteração e exclusão exigem autenticação e respeitam a secretaria; cidadãos consultam pelo protocolo completo.
 2. `npm install`
 3. `npx prisma migrate dev --name init`
 4. `npm run dev`
@@ -65,8 +67,10 @@ Passos:
 | POST   | /api/usuarios                      | não          | Cadastro de cidadão               |
 | GET    | /api/usuarios                      | sim          | Listagem de cidadãos              |
 | POST   | /api/chamados                      | não          | Abertura de solicitação           |
-| GET    | /api/chamados                      | não          | Listagem de solicitações          |
+| GET    | /api/chamados                      | sim          | Listagem conforme secretaria; principal vê todas |
+| GET    | /api/chamados/estatisticas         | não          | Totais agregados de solicitações  |
 | GET    | /api/chamados/protocolo/:protocolo | não          | Consulta por protocolo            |
+| GET    | /api/chamados/:id                  | sim          | Consulta por ID conforme secretaria |
 | PATCH  | /api/chamados/:id/status           | sim          | Alteração de status               |
 | DELETE | /api/chamados/:id                  | sim          | Exclusão de solicitação           |
 | POST   | /api/administradores               | não (token de convite) | Cadastro restrito de administrador |

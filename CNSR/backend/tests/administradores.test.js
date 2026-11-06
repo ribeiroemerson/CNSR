@@ -2,6 +2,7 @@ const request = require("supertest");
 const bcrypt = require("bcryptjs");
 const app = require("../src/app");
 const prisma = require("../src/config/prisma");
+const { cadastrarAdministradorSchema, criarAdministradorSchema } = require("../src/modules/administradores/administrador.dto");
 
 describe("Administradores", () => {
   const sufixo = Date.now();
@@ -15,13 +16,15 @@ describe("Administradores", () => {
     nomeCompleto: "Admin de Teste",
     email: `admin${sufixo}@teste.com`,
     usuario: `admin${sufixo}`,
+    secretaria: "Iluminação Pública",
     senha: "senha123",
     confirmarSenha: "senha123"
   };
   const dadosAdminDireto = {
     nomeCompleto: "Admin Direto de Teste",
     email: `direto${sufixo}@teste.com`,
-    usuario: `direto${sufixo}`
+    usuario: `direto${sufixo}`,
+    secretaria: "Obras e Vias"
   };
 
   let tokenPrincipal;
@@ -51,6 +54,13 @@ describe("Administradores", () => {
   it("deve rejeitar cadastro com dados inválidos", async () => {
     const resposta = await request(app).post("/api/administradores").send({});
     expect(resposta.status).toBe(400);
+  });
+
+  it("deve exigir secretaria válida nos dois tipos de cadastro", () => {
+    for (const secretaria of [undefined, "Secretaria inexistente"]) {
+      expect(cadastrarAdministradorSchema.safeParse({ ...dadosAdmin, secretaria, tokenConvite: "convite" }).success).toBe(false);
+      expect(criarAdministradorSchema.safeParse({ ...dadosAdminDireto, secretaria, senhaPrincipal }).success).toBe(false);
+    }
   });
 
   it("deve rejeitar cadastro sem token de convite", async () => {

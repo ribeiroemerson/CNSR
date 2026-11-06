@@ -1,4 +1,6 @@
 const { z } = require("zod");
+const { CATEGORIAS_VALIDAS } = require("../chamados/chamado.dto");
+const secretariaSchema = z.enum(CATEGORIAS_VALIDAS, { errorMap: () => ({ message: "Selecione uma secretaria válida." }) });
 
 // DTO de entrada: cadastro de um novo administrador
 const cadastrarAdministradorSchema = z
@@ -6,6 +8,7 @@ const cadastrarAdministradorSchema = z
     nomeCompleto: z.string().trim().min(1, "O nome completo é obrigatório."),
     email: z.string().trim().email("Informe um e-mail válido."),
     usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres."),
+    secretaria: secretariaSchema,
     senha: z.string().min(6, "A senha deve ter ao menos 6 caracteres."),
     confirmarSenha: z.string(),
     tokenConvite: z.string().trim().min(1).optional()
@@ -39,7 +42,8 @@ const recuperarSenhaSchema = confirmarSenhaPrincipalSchema.extend({
 const criarAdministradorSchema = confirmarSenhaPrincipalSchema.extend({
   nomeCompleto: z.string().trim().min(1, "O nome completo é obrigatório."),
   email: z.string().trim().email("Informe um e-mail válido."),
-  usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres.")
+  usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres."),
+  secretaria: secretariaSchema
 });
 
 // DTO de entrada: bloqueio ou desbloqueio
@@ -63,7 +67,8 @@ const alterarSenhaPropriaSchema = z
 const atualizarAdministradorSchema = z.object({
   nomeCompleto: z.string().trim().min(1, "O nome completo é obrigatório.").optional(),
   email: z.string().trim().email("Informe um e-mail válido.").optional(),
-  usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres.").optional()
+  usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres.").optional(),
+  secretaria: secretariaSchema.optional()
 });
 
 // DTO de saída: nunca expõe o hash da senha
@@ -74,6 +79,7 @@ function paraSaidaAdministrador(administrador) {
     email: administrador.email,
     usuario: administrador.usuario,
     principal: administrador.principal,
+    secretaria: administrador.secretaria,
     bloqueado: administrador.bloqueado,
     dataCadastro: administrador.dataCadastro
   };

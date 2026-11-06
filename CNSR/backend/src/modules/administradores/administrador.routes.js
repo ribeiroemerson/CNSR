@@ -306,6 +306,11 @@ router.post(
  *               email:
  *                 type: string
  *                 format: email
+ *               usuario:
+ *                 type: string
+ *               secretaria:
+ *                 type: string
+ *                 enum: [Iluminação Pública, Obras e Vias, Limpeza Urbana, Saneamento e Água, Meio Ambiente, Trânsito e Mobilidade]
  *     responses:
  *       200:
  *         description: Administrador atualizado
@@ -343,7 +348,7 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
- *             required: [nomeCompleto, email, usuario, senhaPrincipal]
+ *             required: [nomeCompleto, email, usuario, secretaria, senhaPrincipal]
  *             properties:
  *               nomeCompleto:
  *                 type: string
@@ -352,6 +357,9 @@ router.post(
  *                 format: email
  *               usuario:
  *                 type: string
+ *               secretaria:
+ *                 type: string
+ *                 enum: [Iluminação Pública, Obras e Vias, Limpeza Urbana, Saneamento e Água, Meio Ambiente, Trânsito e Mobilidade]
  *               senhaPrincipal:
  *                 type: string
  *                 format: password

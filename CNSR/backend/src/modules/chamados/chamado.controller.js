@@ -8,12 +8,12 @@ const criar = asyncHandler(async (req, res) => {
 });
 
 const listar = asyncHandler(async (req, res) => {
-  const chamados = await service.listarChamados();
+  const chamados = await service.listarChamados(req.administrador);
   res.json(chamados.map(paraSaidaChamado));
 });
 
 const buscarPorId = asyncHandler(async (req, res) => {
-  const chamado = await service.buscarChamadoPorId(Number(req.params.id));
+  const chamado = await service.buscarChamadoPorId(Number(req.params.id), req.administrador);
   res.json(paraSaidaChamado(chamado));
 });
 
@@ -23,13 +23,17 @@ const buscarPorProtocolo = asyncHandler(async (req, res) => {
 });
 
 const atualizarStatus = asyncHandler(async (req, res) => {
-  const chamado = await service.atualizarStatusChamado(Number(req.params.id), req.body.status);
+  const chamado = await service.atualizarStatusChamado(Number(req.params.id), req.body.status, req.administrador);
   res.json(paraSaidaChamado(chamado));
 });
 
 const remover = asyncHandler(async (req, res) => {
-  await service.removerChamado(Number(req.params.id));
+  await service.removerChamado(Number(req.params.id), req.administrador);
   res.status(204).send();
 });
 
-module.exports = { criar, listar, buscarPorId, buscarPorProtocolo, atualizarStatus, remover };
+const estatisticas = asyncHandler(async (_req, res) => {
+  res.json(await service.estatisticas());
+});
+
+module.exports = { criar, listar, buscarPorId, buscarPorProtocolo, atualizarStatus, remover, estatisticas };

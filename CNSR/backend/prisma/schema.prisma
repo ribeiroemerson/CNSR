@@ -35,6 +35,7 @@ model Administrador {
   senhaHash    String
   principal    Boolean   @default(false)
   bloqueado    Boolean   @default(false)
+  secretaria   String?
   dataCadastro DateTime  @default(now())
   noticias     Noticia[]
   convites     ConviteAdministrador[]

@@ -5,12 +5,18 @@ async function criarChamado(dados) {
   return repository.criar(dados);
 }
 
-async function listarChamados() {
-  return repository.listarTodos();
+function categoriaPermitida(administrador) {
+  if (administrador.principal) return null;
+  if (!administrador.secretaria) throw new AppError("Sua conta ainda não está vinculada a uma secretaria. Contate o administrador principal.", 403);
+  return administrador.secretaria;
 }
 
-async function buscarChamadoPorId(id) {
-  const chamado = await repository.buscarPorId(id);
+async function listarChamados(administrador) {
+  return repository.listarTodos(categoriaPermitida(administrador));
+}
+
+async function buscarChamadoPorId(id, administrador) {
+  const chamado = await repository.buscarPorId(id, categoriaPermitida(administrador));
   if (!chamado) throw new AppError("Chamado não encontrado.", 404);
   return chamado;
 }
@@ -21,14 +27,16 @@ async function buscarChamadoPorProtocolo(protocolo) {
   return chamado;
 }
 
-async function atualizarStatusChamado(id, status) {
-  await buscarChamadoPorId(id);
-  return repository.atualizarStatus(id, status);
+async function atualizarStatusChamado(id, status, administrador) {
+  const categoria = categoriaPermitida(administrador);
+  const { count } = await repository.atualizarStatus(id, status, categoria);
+  if (!count) throw new AppError("Chamado não encontrado.", 404);
+  return buscarChamadoPorId(id, administrador);
 }
 
-async function removerChamado(id) {
-  await buscarChamadoPorId(id);
-  return repository.remover(id);
+async function removerChamado(id, administrador) {
+  const { count } = await repository.remover(id, categoriaPermitida(administrador));
+  if (!count) throw new AppError("Chamado não encontrado.", 404);
 }
 
 module.exports = {
@@ -37,5 +45,6 @@ module.exports = {
   buscarChamadoPorId,
   buscarChamadoPorProtocolo,
   atualizarStatusChamado,
-  removerChamado
+  removerChamado,
+  estatisticas: repository.estatisticas
 };

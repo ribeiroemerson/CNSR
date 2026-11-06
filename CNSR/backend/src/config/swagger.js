@@ -104,11 +104,12 @@ const options = {
         },
         NovoAdministrador: {
           type: "object",
-          required: ["nomeCompleto", "email", "usuario", "senha", "confirmarSenha"],
+          required: ["nomeCompleto", "email", "usuario", "secretaria", "senha", "confirmarSenha"],
           properties: {
             nomeCompleto: { type: "string" },
             email: { type: "string", format: "email" },
             usuario: { type: "string" },
+            secretaria: { type: "string", enum: ["Iluminação Pública", "Obras e Vias", "Limpeza Urbana", "Saneamento e Água", "Meio Ambiente", "Trânsito e Mobilidade"] },
             senha: { type: "string", format: "password", minLength: 6 },
             confirmarSenha: { type: "string", format: "password" },
             tokenConvite: { type: "string", description: "Token gerado pelo administrador principal para este e-mail" }
@@ -122,6 +123,7 @@ const options = {
             email: { type: "string" },
             usuario: { type: "string" },
             principal: { type: "boolean" },
+            secretaria: { type: "string", nullable: true },
             bloqueado: { type: "boolean" },
             dataCadastro: { type: "string", format: "date-time" }
           }

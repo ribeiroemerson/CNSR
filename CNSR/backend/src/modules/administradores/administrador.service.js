@@ -47,7 +47,7 @@ async function podeCriarPrincipal(email) {
   return !(await repository.existePrincipal());
 }
 
-async function cadastrarAdministrador({ nomeCompleto, email, usuario, senha, tokenConvite }) {
+async function cadastrarAdministrador({ nomeCompleto, email, usuario, senha, secretaria, tokenConvite }) {
   const emailNormalizado = normalizarEmail(email);
 
   const existente = await repository.buscarPorUsuarioOuEmail(usuario, emailNormalizado);
@@ -56,7 +56,7 @@ async function cadastrarAdministrador({ nomeCompleto, email, usuario, senha, tok
   }
 
   const senhaHash = await bcrypt.hash(senha, SALT_ROUNDS);
-  const dados = { nomeCompleto, email: emailNormalizado, usuario, senhaHash };
+  const dados = { nomeCompleto, email: emailNormalizado, usuario, senhaHash, secretaria };
 
   if (!tokenConvite) {
     if (!(await podeCriarPrincipal(emailNormalizado))) {
@@ -216,7 +216,7 @@ async function buscarAdministradorPorId(id) {
 }
 
 // O principal cria a conta diretamente; a senha temporária é gerada pelo sistema
-async function criarAdministradorPeloPrincipal(principalId, { nomeCompleto, email, usuario }, senhaPrincipal) {
+async function criarAdministradorPeloPrincipal(principalId, { nomeCompleto, email, usuario, secretaria }, senhaPrincipal) {
   await validarSenhaPrincipal(principalId, senhaPrincipal);
   const emailNormalizado = normalizarEmail(email);
 
@@ -227,6 +227,7 @@ async function criarAdministradorPeloPrincipal(principalId, { nomeCompleto, emai
     nomeCompleto,
     email: emailNormalizado,
     usuario,
+    secretaria,
     senhaHash: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), SALT_ROUNDS)
   });
 

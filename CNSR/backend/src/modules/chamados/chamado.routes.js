@@ -32,8 +32,10 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/Erro'
  *   get:
- *     summary: Lista todas as solicitações
+ *     summary: Lista chamados da secretaria do administrador ou todos para o principal
  *     tags: [Chamados]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de chamados
@@ -44,9 +46,29 @@ const router = Router();
  *               items:
  *                 $ref: '#/components/schemas/Chamado'
  */
-// Abertura e consulta de solicitações: públicas
+// A abertura e as estatísticas são públicas; a listagem exige autenticação.
 router.post("/", validate(criarChamadoSchema), controller.criar);
-router.get("/", controller.listar);
+router.get("/", autenticar, controller.listar);
+/**
+ * @openapi
+ * /chamados/estatisticas:
+ *   get:
+ *     summary: Retorna totais agregados de chamados
+ *     tags: [Chamados]
+ *     responses:
+ *       200:
+ *         description: Total de chamados e total concluído
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total:
+ *                   type: integer
+ *                 concluidos:
+ *                   type: integer
+ */
+router.get("/estatisticas", controller.estatisticas);
 
 /**
  * @openapi
@@ -83,6 +105,8 @@ router.get("/protocolo/:protocolo", controller.buscarPorProtocolo);
  *   get:
  *     summary: Busca um chamado pelo id
  *     tags: [Chamados]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -103,7 +127,7 @@ router.get("/protocolo/:protocolo", controller.buscarPorProtocolo);
  *             schema:
  *               $ref: '#/components/schemas/Erro'
  */
-router.get("/:id", controller.buscarPorId);
+router.get("/:id", autenticar, controller.buscarPorId);
 
 /**
  * @openapi

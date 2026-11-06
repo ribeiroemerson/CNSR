@@ -211,7 +211,7 @@
       <div class="section-header-flex">
         <div>
           <h2 class="section-title">Acompanhamento de Solicitações</h2>
-          <p class="section-description">Consulte sua solicitação por número de protocolo ou telefone cadastrado.</p>
+          <p class="section-description">Consulte sua solicitação pelo número completo de protocolo.</p>
         </div>
       </div>
 
@@ -220,11 +220,6 @@
           <div class="search-field">
             <label for="inputBuscaProtocoloUsuario">Número do protocolo</label>
             <input type="text" id="inputBuscaProtocoloUsuario" class="form-control" placeholder="Ex.: NSR-2026-0001">
-          </div>
-
-          <div class="search-field">
-            <label for="inputBuscaTelefoneUsuario">Número de telefone</label>
-            <input type="text" id="inputBuscaTelefoneUsuario" class="form-control" placeholder="Ex.: (86) 99999-1234">
           </div>
 
           <div class="search-field search-actions">
@@ -245,7 +240,7 @@
       </div>
 
       <div id="resultadoConsultaUsuario" class="tracking-result">
-        <p class="empty-state">Informe o protocolo ou o telefone para localizar a solicitação.</p>
+        <p class="empty-state">Informe o protocolo completo para localizar a solicitação.</p>
       </div>
     </section>
 
@@ -473,6 +468,10 @@
           <input type="text" id="usuarioAdmin" class="form-control" placeholder="Escolha um nome de usuário" required>
         </div>
         <div class="form-group full-width">
+          <label for="secretariaAdmin">Secretaria</label>
+          <select id="secretariaAdmin" class="form-control" required></select>
+        </div>
+        <div class="form-group full-width">
           <label for="senhaAdmin">Senha</label>
           <div class="password-field">
             <input type="password" id="senhaAdmin" class="form-control" placeholder="Crie uma senha (mín. 6 caracteres)" required minlength="6">
@@ -559,6 +558,10 @@
         <div class="form-group full-width">
           <label for="adminGerenciadoUsuario">Usuário</label>
           <input type="text" id="adminGerenciadoUsuario" class="form-control" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="adminGerenciadoSecretaria">Secretaria</label>
+          <select id="adminGerenciadoSecretaria" class="form-control" required></select>
         </div>
         <div class="form-actions">
           <button type="submit" id="btnSalvarAdminGerenciado" class="btn btn-primary">Criar administrador</button>

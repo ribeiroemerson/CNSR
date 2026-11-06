@@ -12,24 +12,32 @@ function criar(dados) {
   });
 }
 
-function listarTodos() {
-  return prisma.chamado.findMany({ orderBy: { criadoEm: "desc" } });
+function listarTodos(categoria) {
+  return prisma.chamado.findMany({ where: categoria ? { categoria } : {}, orderBy: { criadoEm: "desc" } });
 }
 
-function buscarPorId(id) {
-  return prisma.chamado.findUnique({ where: { id } });
+function buscarPorId(id, categoria) {
+  return prisma.chamado.findFirst({ where: { id, ...(categoria && { categoria }) } });
 }
 
 function buscarPorProtocolo(protocolo) {
   return prisma.chamado.findUnique({ where: { protocolo } });
 }
 
-function atualizarStatus(id, status) {
-  return prisma.chamado.update({ where: { id }, data: { status } });
+function atualizarStatus(id, status, categoria) {
+  return prisma.chamado.updateMany({ where: { id, ...(categoria && { categoria }) }, data: { status } });
 }
 
-function remover(id) {
-  return prisma.chamado.delete({ where: { id } });
+function remover(id, categoria) {
+  return prisma.chamado.deleteMany({ where: { id, ...(categoria && { categoria }) } });
+}
+
+async function estatisticas() {
+  const [total, concluidos] = await prisma.$transaction([
+    prisma.chamado.count(),
+    prisma.chamado.count({ where: { status: "CONCLUIDO" } })
+  ]);
+  return { total, concluidos };
 }
 
 module.exports = {
@@ -38,5 +46,6 @@ module.exports = {
   buscarPorId,
   buscarPorProtocolo,
   atualizarStatus,
-  remover
+  remover,
+  estatisticas
 };

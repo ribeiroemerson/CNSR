@@ -22,7 +22,7 @@ async function autenticar(req, res, next) {
     if (!administrador || administrador.bloqueado) {
       return res.status(401).json({ mensagem: "Conta bloqueada ou inexistente." });
     }
-    req.administrador = { id: administrador.id, usuario: administrador.usuario, principal: administrador.principal };
+    req.administrador = { id: administrador.id, usuario: administrador.usuario, principal: administrador.principal, secretaria: administrador.secretaria };
     next();
   } catch (erro) {
     next(erro);

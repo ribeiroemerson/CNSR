@@ -56,6 +56,10 @@ async function apiFetch(caminho, opcoes = {}) {
 // ==========================================
 
 let chamadosCache = [];
+let consultaUsuarioCache = [];
+let versaoCarregamentoChamados = 0;
+let versaoConsultaUsuario = 0;
+let estatisticasChamados = { total: 0, concluidos: 0 };
 
 // Busca todos os chamados no backend
 function listarChamados() {
@@ -85,13 +89,29 @@ function removerChamadoApi(id) {
 
 // Recarrega os chamados do backend e atualiza tabela e estatísticas
 async function carregarChamados() {
+  const versao = ++versaoCarregamentoChamados;
   try {
-    chamadosCache = await listarChamados();
+    const chamados = administradorLogado() ? await listarChamados() : [];
+    if (versao !== versaoCarregamentoChamados) return;
+    chamadosCache = chamados;
   } catch (erro) {
+    if (versao !== versaoCarregamentoChamados) return;
     console.error("Erro ao carregar chamados:", erro);
     chamadosCache = [];
+    if (administradorLogado()) alert(erro.message);
   }
   renderizarTabelaChamados(chamadosCache);
+}
+
+async function carregarEstatisticasChamados() {
+  try {
+    estatisticasChamados = await apiFetch("/chamados/estatisticas");
+  } catch (erro) {
+    console.error("Erro ao carregar estatísticas:", erro);
+    document.getElementById("totalChamados").textContent = "—";
+    document.getElementById("taxaResolucao").textContent = "—";
+    return;
+  }
   atualizarEstatisticas();
 }
 
@@ -177,14 +197,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const inputTelefoneUsuario = document.getElementById("inputBuscaTelefoneUsuario");
-  if (inputTelefoneUsuario) {
-    inputTelefoneUsuario.addEventListener("input", () => aplicarMascaraTelefone(inputTelefoneUsuario));
-  }
-
   const inputProtocoloUsuario = document.getElementById("inputBuscaProtocoloUsuario");
   if (inputProtocoloUsuario) {
-    inputProtocoloUsuario.addEventListener("input", () => aplicarMascaraProtocolo(inputProtocoloUsuario));
+    inputProtocoloUsuario.addEventListener("input", () => {
+      aplicarMascaraProtocolo(inputProtocoloUsuario);
+      limparConsultaUsuario();
+    });
   }
 
   const btnConsultarChamado = document.getElementById("btnConsultarProtocolo");
@@ -192,7 +210,6 @@ document.addEventListener("DOMContentLoaded", () => {
     btnConsultarChamado.addEventListener("click", () => {
       const secaoConsulta = document.querySelector(".user-tracking-section");
       const campoProtocolo = document.getElementById("inputBuscaProtocoloUsuario");
-      const campoTelefone = document.getElementById("inputBuscaTelefoneUsuario");
 
       if (secaoConsulta) {
         secaoConsulta.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -202,13 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
           campoProtocolo.focus();
           campoProtocolo.value = "";
-          mostrarMensagemAcompanhamentoUsuario();
-        }, 250);
-      } else if (campoTelefone) {
-        setTimeout(() => {
-          campoTelefone.focus();
-          campoTelefone.value = "";
-          mostrarMensagemAcompanhamentoUsuario();
+          limparConsultaUsuario();
         }, 250);
       }
     });
@@ -222,8 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
   mostrarMensagemAcompanhamentoUsuario();
 
   const camposConsultaUsuario = [
-    document.getElementById("inputBuscaProtocoloUsuario"),
-    document.getElementById("inputBuscaTelefoneUsuario")
+    document.getElementById("inputBuscaProtocoloUsuario")
   ].filter(Boolean);
 
   camposConsultaUsuario.forEach(campo => {
@@ -273,10 +283,20 @@ const CATEGORIAS_SERVICO = [
   "Trânsito e Mobilidade"
 ];
 
+function preencherSecretarias() {
+  for (const id of ["secretariaAdmin", "adminGerenciadoSecretaria"]) {
+    const select = document.getElementById(id);
+    select.innerHTML = '<option value="">Selecione uma secretaria...</option>';
+    CATEGORIAS_SERVICO.forEach(categoria => {
+      select.add(new Option(categoria, categoria));
+    });
+  }
+}
+
 // Recalcula e atualiza os cards de estatística com base nos dados reais da API
 function atualizarEstatisticas() {
-  const totalChamados = chamadosCache.length;
-  const concluidos = chamadosCache.filter(c => c.status === "CONCLUIDO").length;
+  const totalChamados = estatisticasChamados.total;
+  const concluidos = estatisticasChamados.concluidos;
   const taxaResolucao = totalChamados > 0 ? Math.round((concluidos / totalChamados) * 100) : 0;
 
   const elTotalChamados = document.getElementById("totalChamados");
@@ -321,6 +341,7 @@ async function cadastrarAdministrador(event) {
   const nomeCompleto = document.getElementById("nomeAdmin").value.trim();
   const email = document.getElementById("emailAdmin").value.trim();
   const usuario = document.getElementById("usuarioAdmin").value.trim();
+  const secretaria = document.getElementById("secretariaAdmin").value;
   const senha = document.getElementById("senhaAdmin").value;
   const confirmarSenha = document.getElementById("confirmarSenhaAdmin").value;
   const tokenConvite = document.getElementById("tokenConviteAdmin").value.trim();
@@ -333,7 +354,7 @@ async function cadastrarAdministrador(event) {
   try {
     await apiFetch("/administradores", {
       method: "POST",
-      body: JSON.stringify({ nomeCompleto, email, usuario, senha, confirmarSenha, ...(tokenConvite && { tokenConvite }) })
+      body: JSON.stringify({ nomeCompleto, email, usuario, secretaria, senha, confirmarSenha, ...(tokenConvite && { tokenConvite }) })
     });
 
     document.getElementById("formAdminCadastro").reset();
@@ -373,6 +394,8 @@ async function autenticarAdministrador(event) {
 function sairAdministrador() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(ADMIN_PERFIL_KEY);
+  chamadosCache = [];
+  consultaUsuarioCache = [];
   ocultarTokenConvite();
   cancelarConfirmacaoSenhaPrincipal();
   fecharModal("modalConvitesAdmin");
@@ -636,7 +659,7 @@ async function carregarAdminsGerenciados() {
           <button type="button" class="btn-text" onclick="removerAdminGerenciado(${adm.id})" title="Remover"><i class="fa-solid fa-trash"></i></button>
         </span>` : "";
       return `<li>
-        <span>${escaparHtml(adm.nomeCompleto)} (${escaparHtml(adm.usuario)}) &middot; ${escaparHtml(adm.email)} &middot; <strong>${status}</strong></span>
+        <span>${escaparHtml(adm.nomeCompleto)} (${escaparHtml(adm.usuario)}) &middot; ${escaparHtml(adm.email)} &middot; Secretaria: ${escaparHtml(adm.secretaria || "Não vinculada")} &middot; <strong>${status}</strong></span>
         ${acoes}
       </li>`;
     }).join("");
@@ -674,6 +697,7 @@ function editarAdminGerenciado(id) {
   document.getElementById("adminGerenciadoNome").value = adm.nomeCompleto;
   document.getElementById("adminGerenciadoEmail").value = adm.email;
   document.getElementById("adminGerenciadoUsuario").value = adm.usuario;
+  document.getElementById("adminGerenciadoSecretaria").value = adm.secretaria || "";
   document.getElementById("btnSalvarAdminGerenciado").textContent = "Salvar alterações";
   document.getElementById("btnCancelarEdicaoAdmin").classList.remove("hidden");
 }
@@ -684,7 +708,8 @@ async function salvarAdminGerenciado(event) {
   const dados = {
     nomeCompleto: document.getElementById("adminGerenciadoNome").value.trim(),
     email: document.getElementById("adminGerenciadoEmail").value.trim(),
-    usuario: document.getElementById("adminGerenciadoUsuario").value.trim()
+    usuario: document.getElementById("adminGerenciadoUsuario").value.trim(),
+    secretaria: document.getElementById("adminGerenciadoSecretaria").value
   };
 
   try {
@@ -783,11 +808,16 @@ function mostrarMensagemAcompanhamentoUsuario() {
   if (!resultado) return;
 
   const protocolo = document.getElementById("inputBuscaProtocoloUsuario")?.value.trim();
-  const telefone = document.getElementById("inputBuscaTelefoneUsuario")?.value.trim();
-
-  if (!protocolo && !telefone) {
-    resultado.innerHTML = '<p class="empty-state">Use o número do protocolo ou telefone para consultar sua solicitação.</p>';
+  if (!protocolo) {
+    resultado.innerHTML = '<p class="empty-state">Use o número completo do protocolo para consultar sua solicitação.</p>';
   }
+}
+
+function limparConsultaUsuario() {
+  ++versaoConsultaUsuario;
+  consultaUsuarioCache = [];
+  const resultado = document.getElementById("resultadoConsultaUsuario");
+  resultado.innerHTML = '<p class="empty-state">Use o número completo do protocolo para consultar sua solicitação.</p>';
 }
 
 // ==========================================
@@ -887,6 +917,7 @@ async function alterarStatusChamado(id, novoStatus, seletorStatus) {
   try {
     await atualizarStatusChamadoApi(id, novoStatus);
     await carregarChamados();
+    await carregarEstatisticasChamados();
   } catch (erro) {
     alert(erro.message);
     renderizarTabelaChamados();
@@ -1036,21 +1067,7 @@ function normalizarConsulta(texto) {
 }
 
 function obterChamadosPorConsultaUsuario() {
-  const protocoloDigitado = document.getElementById("inputBuscaProtocoloUsuario")?.value.trim() || "";
-  const telefoneDigitado = document.getElementById("inputBuscaTelefoneUsuario")?.value.trim() || "";
-
-  const protocoloNormalizado = normalizarConsulta(protocoloDigitado);
-  const telefoneNormalizado = normalizarConsulta(telefoneDigitado);
-
-  if (!protocoloNormalizado && !telefoneNormalizado) {
-    return [];
-  }
-
-  return chamadosCache.filter(chamado => {
-    const protocoloMatch = !protocoloNormalizado || normalizarConsulta(chamado.protocolo).includes(protocoloNormalizado);
-    const telefoneMatch = !telefoneNormalizado || normalizarConsulta(chamado.telefone).includes(telefoneNormalizado);
-    return protocoloMatch && telefoneMatch;
-  });
+  return consultaUsuarioCache;
 }
 
 function montarHtmlResultadoConsultaUsuario(lista) {
@@ -1090,18 +1107,25 @@ function montarHtmlResultadoConsultaUsuario(lista) {
   `;
 }
 
-function consultarSolicitacaoUsuario() {
-  const lista = obterChamadosPorConsultaUsuario();
+async function consultarSolicitacaoUsuario() {
+  const versao = ++versaoConsultaUsuario;
+  const protocolo = document.getElementById("inputBuscaProtocoloUsuario").value.trim();
   const resultado = document.getElementById("resultadoConsultaUsuario");
-
-  if (!resultado) return;
-
-  if (!lista.length && (!document.getElementById("inputBuscaProtocoloUsuario")?.value.trim() && !document.getElementById("inputBuscaTelefoneUsuario")?.value.trim())) {
+  consultaUsuarioCache = [];
+  if (!protocolo) {
     mostrarMensagemAcompanhamentoUsuario();
     return;
   }
-
-  resultado.innerHTML = montarHtmlResultadoConsultaUsuario(lista);
+  resultado.textContent = "Consultando solicitação...";
+  try {
+    const chamado = await apiFetch(`/chamados/protocolo/${encodeURIComponent(protocolo)}`);
+    if (versao !== versaoConsultaUsuario) return;
+    consultaUsuarioCache = [chamado];
+    resultado.innerHTML = montarHtmlResultadoConsultaUsuario(consultaUsuarioCache);
+  } catch (erro) {
+    if (versao !== versaoConsultaUsuario) return;
+    resultado.textContent = erro.message;
+  }
 }
 
 function imprimirConsultaUsuario() {
@@ -1203,7 +1227,7 @@ function gerarConsultaUsuarioPDF() {
 }
 
 function imprimirConsultaUsuarioItem(id) {
-  const chamado = obterChamadoPorId(id);
+  const chamado = consultaUsuarioCache.find(item => item.id === id);
   if (!chamado) return;
 
   const janelaImpressao = window.open("", "_blank", "width=700,height=800");
@@ -1244,7 +1268,7 @@ function imprimirConsultaUsuarioItem(id) {
 }
 
 function gerarConsultaUsuarioPDFItem(id) {
-  const chamado = obterChamadoPorId(id);
+  const chamado = consultaUsuarioCache.find(item => item.id === id);
   if (!chamado) return;
 
   if (!window.jspdf) {
@@ -1396,6 +1420,7 @@ async function excluirChamado(id, protocolo) {
   try {
     await removerChamadoApi(id);
     await carregarChamados();
+    await carregarEstatisticasChamados();
   } catch (erro) {
     alert(erro.message);
   }
@@ -1435,6 +1460,7 @@ async function salvarChamado(event) {
 
     document.getElementById("formNovoChamado").reset();
     await carregarChamados();
+    await carregarEstatisticasChamados();
 
     ultimoChamadoRegistrado = chamadoCriado;
 
@@ -1700,8 +1726,10 @@ function ativarConsultaProtocolo() {
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  preencherSecretarias();
   atualizarInterfaceAdmin();
   carregarChamados();
+  carregarEstatisticasChamados();
   carregarNoticias();
 
   const btnConsulta = document.getElementById("btnConsultarProtocolo");

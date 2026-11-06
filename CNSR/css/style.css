@@ -841,6 +841,13 @@ body {
   overscroll-behavior: contain;
 }
 
+#modalAdminCadastro .modal-card,
+#modalGerenciarAdmins .modal-card {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+
 #modalConvitesAdmin .invite-list li > span {
   min-width: 0;
   overflow-wrap: anywhere;
