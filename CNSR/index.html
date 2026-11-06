@@ -543,7 +543,7 @@
   <div id="modalGerenciarAdmins" class="modal-overlay">
     <div class="modal-card modal-wide">
       <h3 class="modal-title">Gerenciar Administradores</h3>
-      <p class="modal-desc">Crie, edite, bloqueie, redefina a senha ou remova contas de administrador.</p>
+      <p class="modal-desc">Crie, edite, bloqueie, redefina a senha ou remova contas de administrador. Para gerar ou exibir uma senha temporária, confirme sua senha de acesso.</p>
 
       <form id="formAdminGerenciado" onsubmit="salvarAdminGerenciado(event)">
         <input type="hidden" id="adminGerenciadoId">
@@ -566,14 +566,33 @@
       </form>
 
       <div id="senhaTemporariaBox" class="hidden">
-        <p class="modal-desc">Senha temporária (copie agora, não será exibida novamente):</p>
-        <div class="protocol-box invite-token" id="senhaTemporariaValor"></div>
+        <p class="modal-desc">Senha temporária (copie agora; ela será removida ao fechar esta janela):</p>
+        <div class="protocol-box invite-token" id="senhaTemporariaValor" role="status" aria-live="polite"></div>
       </div>
 
       <h4 class="invite-list-title">Contas de administrador</h4>
       <ul id="listaAdminsGerenciados" class="invite-list admin-manage-list"></ul>
 
-      <button type="button" class="btn btn-secondary btn-full" onclick="fecharModal('modalGerenciarAdmins')">Fechar</button>
+      <button type="button" class="btn btn-secondary btn-full" onclick="fecharModalGerenciarAdmins()">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMAÇÃO PARA OPERAÇÕES COM SENHA TEMPORÁRIA -->
+  <div id="modalConfirmarSenhaPrincipal" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title">Confirme sua senha</h3>
+      <p class="modal-desc">Digite a senha de acesso do administrador principal para continuar. Ela será validada com segurança e não será armazenada.</p>
+
+      <form id="formConfirmarSenhaPrincipal" onsubmit="confirmarSenhaPrincipal(event)">
+        <div class="form-group full-width">
+          <label for="senhaConfirmarPrincipal">Senha de acesso</label>
+          <input type="password" id="senhaConfirmarPrincipal" class="form-control" autocomplete="current-password" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="cancelarConfirmacaoSenhaPrincipal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-lock"></i> Confirmar</button>
+        </div>
+      </form>
     </div>
   </div>
 

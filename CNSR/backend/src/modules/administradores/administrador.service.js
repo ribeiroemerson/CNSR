@@ -155,14 +155,28 @@ async function gerarSenhaTemporaria(administrador, assunto, abertura) {
   return { senhaTemporaria, enviado };
 }
 
-async function recuperarSenha(email) {
+async function validarSenhaPrincipal(id, senhaPrincipal) {
+  const principal = await buscarAdministradorPorId(id);
+  if (!principal.principal) {
+    throw new AppError("Apenas o administrador principal pode realizar esta ação.", 403);
+  }
+
+  const senhaValida = await bcrypt.compare(senhaPrincipal, principal.senhaHash);
+  if (!senhaValida) {
+    throw new AppError("A senha de acesso do administrador principal está incorreta.", 400);
+  }
+}
+
+async function recuperarSenha(principalId, email, senhaPrincipal) {
+  await validarSenhaPrincipal(principalId, senhaPrincipal);
   const administrador = await repository.buscarPorEmail(email);
   if (!administrador) throw new AppError("Nenhum administrador encontrado com este e-mail.", 404);
 
   return gerarSenhaTemporaria(administrador, "Senha temporária - Conecta Nova Santa Rita", "Sua senha foi redefinida.");
 }
 
-async function redefinirSenhaAdministrador(id) {
+async function redefinirSenhaAdministrador(principalId, id, senhaPrincipal) {
+  await validarSenhaPrincipal(principalId, senhaPrincipal);
   const administrador = await buscarAdministradorPorId(id);
   return gerarSenhaTemporaria(administrador, "Senha temporária - Conecta Nova Santa Rita", "Sua senha foi redefinida pelo administrador principal.");
 }
@@ -178,7 +192,8 @@ async function buscarAdministradorPorId(id) {
 }
 
 // O principal cria a conta diretamente; a senha temporária é gerada pelo sistema
-async function criarAdministradorPeloPrincipal({ nomeCompleto, email, usuario }) {
+async function criarAdministradorPeloPrincipal(principalId, { nomeCompleto, email, usuario }, senhaPrincipal) {
+  await validarSenhaPrincipal(principalId, senhaPrincipal);
   const emailNormalizado = normalizarEmail(email);
 
   const existente = await repository.buscarPorUsuarioOuEmail(usuario, emailNormalizado);

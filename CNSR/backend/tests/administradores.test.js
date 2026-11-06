@@ -18,6 +18,11 @@ describe("Administradores", () => {
     senha: "senha123",
     confirmarSenha: "senha123"
   };
+  const dadosAdminDireto = {
+    nomeCompleto: "Admin Direto de Teste",
+    email: `direto${sufixo}@teste.com`,
+    usuario: `direto${sufixo}`
+  };
 
   let tokenPrincipal;
   let tokenComum;
@@ -37,7 +42,7 @@ describe("Administradores", () => {
   afterAll(async () => {
     // Os convites são removidos em cascata junto com o administrador principal que os criou
     await prisma.administrador.deleteMany({
-      where: { usuario: { in: [dadosPrincipal.usuario, dadosAdmin.usuario] } }
+      where: { usuario: { in: [dadosPrincipal.usuario, dadosAdmin.usuario, dadosAdminDireto.usuario] } }
     });
     await prisma.$disconnect();
   });
@@ -168,6 +173,64 @@ describe("Administradores", () => {
       .send({ email: dadosAdmin.email });
 
     expect(resposta.status).toBe(401);
+  });
+
+  it("deve exigir a senha do principal para criar uma conta com senha temporária", async () => {
+    const dadosNovaConta = { ...dadosAdminDireto, senhaPrincipal: "senha-incorreta" };
+    const resposta = await request(app)
+      .post("/api/administradores/criar")
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send(dadosNovaConta);
+
+    expect(resposta.status).toBe(400);
+    const administrador = await prisma.administrador.findUnique({ where: { usuario: dadosAdminDireto.usuario } });
+    expect(administrador).toBeNull();
+  });
+
+  it("deve criar a conta e exibir a senha temporária somente após confirmar a senha do principal", async () => {
+    const resposta = await request(app)
+      .post("/api/administradores/criar")
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ ...dadosAdminDireto, senhaPrincipal });
+
+    expect(resposta.status).toBe(201);
+    expect(resposta.body.usuario).toBe(dadosAdminDireto.usuario);
+    expect(resposta.body).not.toHaveProperty("senhaHash");
+    if (resposta.body.enviado) {
+      expect(resposta.body).not.toHaveProperty("senhaTemporaria");
+    } else {
+      expect(typeof resposta.body.senhaTemporaria).toBe("string");
+      const login = await request(app)
+        .post("/api/administradores/login")
+        .send({ usuario: dadosAdminDireto.usuario, senha: resposta.body.senhaTemporaria });
+      expect(login.status).toBe(200);
+    }
+  });
+
+  it("deve exigir a senha do principal antes de redefinir uma senha", async () => {
+    const administrador = await prisma.administrador.findUnique({ where: { usuario: dadosAdmin.usuario } });
+    const hashOriginal = administrador.senhaHash;
+    const resposta = await request(app)
+      .post(`/api/administradores/${administrador.id}/redefinir-senha`)
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaPrincipal: "senha-incorreta" });
+
+    expect(resposta.status).toBe(400);
+    const atualizado = await prisma.administrador.findUnique({ where: { id: administrador.id } });
+    expect(atualizado.senhaHash).toBe(hashOriginal);
+  });
+
+  it("deve exigir a senha do principal antes da recuperação por e-mail", async () => {
+    const administrador = await prisma.administrador.findUnique({ where: { usuario: dadosAdmin.usuario } });
+    const hashOriginal = administrador.senhaHash;
+    const resposta = await request(app)
+      .post("/api/administradores/recuperar-senha")
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ email: dadosAdmin.email, senhaPrincipal: "senha-incorreta" });
+
+    expect(resposta.status).toBe(400);
+    const atualizado = await prisma.administrador.findUnique({ where: { id: administrador.id } });
+    expect(atualizado.senhaHash).toBe(hashOriginal);
   });
 
   it("deve permitir revogar um convite pendente", async () => {

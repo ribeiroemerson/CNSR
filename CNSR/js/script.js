@@ -384,10 +384,10 @@ async function recuperarSenhaAdministrador(event) {
 
   const email = document.getElementById("emailRecuperarAdmin").value.trim();
 
-  try {
+  solicitarConfirmacaoSenhaPrincipal(async senhaPrincipal => {
     const resposta = await apiFetch("/administradores/recuperar-senha", {
       method: "POST",
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, senhaPrincipal })
     });
 
     document.getElementById("formRedefinirSenhaAdmin").reset();
@@ -396,9 +396,7 @@ async function recuperarSenhaAdministrador(event) {
     } else {
       alert(`Senha temporária de ${email}: ${resposta.senhaTemporaria}\n\nEntregue-a por um canal seguro. Ela não será exibida novamente.`);
     }
-  } catch (erro) {
-    alert(erro.message);
-  }
+  });
 }
 
 function alternarVisibilidadeSenha(idCampo, botao) {
@@ -541,12 +539,55 @@ async function copiarTokenConvite() {
 // ==========================================
 
 let adminsGerenciados = [];
+let acaoAguardandoSenhaPrincipal = null;
 
 async function abrirModalGerenciarAdmins() {
   cancelarEdicaoAdmin();
-  document.getElementById("senhaTemporariaBox").classList.add("hidden");
+  ocultarSenhaTemporaria();
   abrirModal("modalGerenciarAdmins");
   await carregarAdminsGerenciados();
+}
+
+function ocultarSenhaTemporaria() {
+  document.getElementById("senhaTemporariaBox").classList.add("hidden");
+  document.getElementById("senhaTemporariaValor").textContent = "";
+}
+
+function fecharModalGerenciarAdmins() {
+  ocultarSenhaTemporaria();
+  fecharModal("modalGerenciarAdmins");
+}
+
+function solicitarConfirmacaoSenhaPrincipal(acao) {
+  if (!administradorLogado() || !obterAdminPerfil()?.principal) {
+    alert("Apenas o administrador principal pode realizar esta ação.");
+    return;
+  }
+
+  acaoAguardandoSenhaPrincipal = acao;
+  document.getElementById("formConfirmarSenhaPrincipal").reset();
+  abrirModal("modalConfirmarSenhaPrincipal");
+  document.getElementById("senhaConfirmarPrincipal").focus();
+}
+
+function cancelarConfirmacaoSenhaPrincipal() {
+  acaoAguardandoSenhaPrincipal = null;
+  document.getElementById("formConfirmarSenhaPrincipal").reset();
+  fecharModal("modalConfirmarSenhaPrincipal");
+}
+
+async function confirmarSenhaPrincipal(event) {
+  event.preventDefault();
+  const senhaPrincipal = document.getElementById("senhaConfirmarPrincipal").value;
+  const acao = acaoAguardandoSenhaPrincipal;
+  cancelarConfirmacaoSenhaPrincipal();
+  if (!acao) return;
+
+  try {
+    await acao(senhaPrincipal);
+  } catch (erro) {
+    alert(erro.message);
+  }
 }
 
 async function carregarAdminsGerenciados() {
@@ -578,8 +619,12 @@ function mostrarSenhaTemporaria(resultado, rotuloEmail) {
   const box = document.getElementById("senhaTemporariaBox");
   if (resultado.enviado) {
     box.classList.add("hidden");
+    document.getElementById("senhaTemporariaValor").textContent = "";
     alert(`Senha temporária enviada por e-mail para ${rotuloEmail}.`);
   } else {
+    if (!resultado.senhaTemporaria) {
+      throw new Error("A API não retornou a senha temporária.");
+    }
     document.getElementById("senhaTemporariaValor").textContent = resultado.senhaTemporaria;
     box.classList.remove("hidden");
   }
@@ -615,13 +660,20 @@ async function salvarAdminGerenciado(event) {
   try {
     if (id) {
       await apiFetch(`/administradores/${id}`, { method: "PUT", body: JSON.stringify(dados) });
-      document.getElementById("senhaTemporariaBox").classList.add("hidden");
+      ocultarSenhaTemporaria();
+      cancelarEdicaoAdmin();
+      await carregarAdminsGerenciados();
     } else {
-      const resultado = await apiFetch("/administradores/criar", { method: "POST", body: JSON.stringify(dados) });
-      mostrarSenhaTemporaria(resultado, dados.email);
+      solicitarConfirmacaoSenhaPrincipal(async senhaPrincipal => {
+        const resultado = await apiFetch("/administradores/criar", {
+          method: "POST",
+          body: JSON.stringify({ ...dados, senhaPrincipal })
+        });
+        mostrarSenhaTemporaria(resultado, dados.email);
+        cancelarEdicaoAdmin();
+        await carregarAdminsGerenciados();
+      });
     }
-    cancelarEdicaoAdmin();
-    await carregarAdminsGerenciados();
   } catch (erro) {
     alert(erro.message);
   }
@@ -638,14 +690,14 @@ async function alternarBloqueioAdmin(id, bloqueado) {
 }
 
 async function redefinirSenhaAdminGerenciado(id) {
-  if (!confirm("Gerar uma nova senha temporária para este administrador?")) return;
-  try {
-    const resultado = await apiFetch(`/administradores/${id}/redefinir-senha`, { method: "POST" });
-    const adm = adminsGerenciados.find(item => item.id === id);
+  const adm = adminsGerenciados.find(item => item.id === id);
+  solicitarConfirmacaoSenhaPrincipal(async senhaPrincipal => {
+    const resultado = await apiFetch(`/administradores/${id}/redefinir-senha`, {
+      method: "POST",
+      body: JSON.stringify({ senhaPrincipal })
+    });
     mostrarSenhaTemporaria(resultado, adm ? adm.email : "o administrador");
-  } catch (erro) {
-    alert(erro.message);
-  }
+  });
 }
 
 async function removerAdminGerenciado(id) {

@@ -8,6 +8,7 @@ const {
   criarAdministradorSchema,
   bloqueioAdministradorSchema,
   alterarSenhaPropriaSchema,
+  confirmarSenhaPrincipalSchema,
   criarConviteSchema,
   loginAdministradorSchema,
   recuperarSenhaSchema,
@@ -21,6 +22,14 @@ const limitadorAutenticacao = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { mensagem: "Muitas tentativas. Tente novamente em alguns minutos." }
+});
+
+const limitadorConfirmacaoSenha = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { mensagem: "Muitas confirmações de senha. Tente novamente em alguns minutos." }
 });
 
 // Limita tentativas de cadastro para dificultar a adivinhação de tokens de convite
@@ -210,10 +219,19 @@ router.patch(
  *         description: Senha temporária gerada
  *       403:
  *         description: Apenas o administrador principal pode redefinir senhas
+ *       400:
+ *         description: Senha de acesso do administrador principal incorreta
  *       404:
  *         description: E-mail não encontrado
  */
-router.post("/recuperar-senha", autenticar, exigirAdministradorPrincipal, validate(recuperarSenhaSchema), controller.recuperarSenha);
+router.post(
+  "/recuperar-senha",
+  autenticar,
+  exigirAdministradorPrincipal,
+  limitadorConfirmacaoSenha,
+  validate(recuperarSenhaSchema),
+  controller.recuperarSenha
+);
 
 /**
  * @openapi
@@ -297,7 +315,7 @@ router.post("/recuperar-senha", autenticar, exigirAdministradorPrincipal, valida
  *         application/json:
  *           schema:
  *             type: object
- *             required: [nomeCompleto, email, usuario]
+ *             required: [nomeCompleto, email, usuario, senhaPrincipal]
  *             properties:
  *               nomeCompleto:
  *                 type: string
@@ -306,9 +324,14 @@ router.post("/recuperar-senha", autenticar, exigirAdministradorPrincipal, valida
  *                 format: email
  *               usuario:
  *                 type: string
+ *               senhaPrincipal:
+ *                 type: string
+ *                 format: password
  *     responses:
  *       201:
  *         description: Conta criada; senha temporária enviada por e-mail ou devolvida uma única vez
+ *       400:
+ *         description: Senha de acesso do administrador principal incorreta ou dados inválidos
  *       409:
  *         description: Usuário ou e-mail já em uso
  * /administradores/{id}/bloqueio:
@@ -350,17 +373,37 @@ router.post("/recuperar-senha", autenticar, exigirAdministradorPrincipal, valida
  *         required: true
  *         schema:
  *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ConfirmarSenhaPrincipal'
  *     responses:
  *       200:
  *         description: Senha temporária enviada por e-mail ou devolvida uma única vez
  */
 // Gestão de administradores: restrita ao administrador principal
-router.post("/criar", autenticar, exigirAdministradorPrincipal, validate(criarAdministradorSchema), controller.criarPeloPrincipal);
+router.post(
+  "/criar",
+  autenticar,
+  exigirAdministradorPrincipal,
+  limitadorConfirmacaoSenha,
+  validate(criarAdministradorSchema),
+  controller.criarPeloPrincipal
+);
 router.get("/", autenticar, exigirAdministradorPrincipal, controller.listar);
 router.get("/:id", autenticar, exigirAdministradorPrincipal, controller.buscarPorId);
 router.put("/:id", autenticar, exigirAdministradorPrincipal, validate(atualizarAdministradorSchema), controller.atualizar);
 router.patch("/:id/bloqueio", autenticar, exigirAdministradorPrincipal, validate(bloqueioAdministradorSchema), controller.alterarBloqueio);
-router.post("/:id/redefinir-senha", autenticar, exigirAdministradorPrincipal, controller.redefinirSenha);
+router.post(
+  "/:id/redefinir-senha",
+  autenticar,
+  exigirAdministradorPrincipal,
+  limitadorConfirmacaoSenha,
+  validate(confirmarSenhaPrincipalSchema),
+  controller.redefinirSenha
+);
 router.delete("/:id", autenticar, exigirAdministradorPrincipal, controller.remover);
 
 module.exports = router;

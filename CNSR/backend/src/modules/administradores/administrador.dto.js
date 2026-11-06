@@ -27,12 +27,16 @@ const loginAdministradorSchema = z.object({
 });
 
 // DTO de entrada: recuperação de senha por e-mail cadastrado
-const recuperarSenhaSchema = z.object({
+const confirmarSenhaPrincipalSchema = z.object({
+  senhaPrincipal: z.string().min(1, "Confirme sua senha de acesso.")
+});
+
+const recuperarSenhaSchema = confirmarSenhaPrincipalSchema.extend({
   email: z.string().trim().email("Informe um e-mail válido.")
 });
 
 // DTO de entrada: criação direta de administrador pelo principal (a senha temporária é gerada pelo sistema)
-const criarAdministradorSchema = z.object({
+const criarAdministradorSchema = confirmarSenhaPrincipalSchema.extend({
   nomeCompleto: z.string().trim().min(1, "O nome completo é obrigatório."),
   email: z.string().trim().email("Informe um e-mail válido."),
   usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres.")
@@ -88,6 +92,7 @@ function paraSaidaConvite(convite) {
 module.exports = {
   cadastrarAdministradorSchema,
   criarAdministradorSchema,
+  confirmarSenhaPrincipalSchema,
   bloqueioAdministradorSchema,
   alterarSenhaPropriaSchema,
   criarConviteSchema,

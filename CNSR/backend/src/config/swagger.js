@@ -143,6 +143,13 @@ const options = {
             confirmarNovaSenha: { type: "string", format: "password" }
           }
         },
+        ConfirmarSenhaPrincipal: {
+          type: "object",
+          required: ["senhaPrincipal"],
+          properties: {
+            senhaPrincipal: { type: "string", format: "password" }
+          }
+        },
         TokenAdministrador: {
           type: "object",
           properties: {
@@ -152,8 +159,11 @@ const options = {
         },
         RecuperarSenha: {
           type: "object",
-          required: ["email"],
-          properties: { email: { type: "string", format: "email" } }
+          required: ["email", "senhaPrincipal"],
+          properties: {
+            email: { type: "string", format: "email" },
+            senhaPrincipal: { type: "string", format: "password" }
+          }
         },
         NovaNoticia: {
           type: "object",

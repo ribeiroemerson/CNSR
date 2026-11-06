@@ -40,7 +40,11 @@ const alterarMinhaSenha = asyncHandler(async (req, res) => {
 });
 
 const recuperarSenha = asyncHandler(async (req, res) => {
-  const { senhaTemporaria, enviado } = await service.recuperarSenha(req.body.email);
+  const { senhaTemporaria, enviado } = await service.recuperarSenha(
+    req.administrador.id,
+    req.body.email,
+    req.body.senhaPrincipal
+  );
   res.json({
     enviado,
     ...(!enviado && { senhaTemporaria }),
@@ -71,7 +75,12 @@ const remover = asyncHandler(async (req, res) => {
 });
 
 const criarPeloPrincipal = asyncHandler(async (req, res) => {
-  const { administrador, senhaTemporaria, enviado } = await service.criarAdministradorPeloPrincipal(req.body);
+  const { senhaPrincipal, ...dadosAdministrador } = req.body;
+  const { administrador, senhaTemporaria, enviado } = await service.criarAdministradorPeloPrincipal(
+    req.administrador.id,
+    dadosAdministrador,
+    senhaPrincipal
+  );
   res.status(201).json({
     ...paraSaidaAdministrador(administrador),
     enviado,
@@ -88,7 +97,11 @@ const alterarBloqueio = asyncHandler(async (req, res) => {
 });
 
 const redefinirSenha = asyncHandler(async (req, res) => {
-  const { senhaTemporaria, enviado } = await service.redefinirSenhaAdministrador(Number(req.params.id));
+  const { senhaTemporaria, enviado } = await service.redefinirSenhaAdministrador(
+    req.administrador.id,
+    Number(req.params.id),
+    req.body.senhaPrincipal
+  );
   res.json({
     enviado,
     ...(!enviado && { senhaTemporaria }),
