@@ -409,6 +409,51 @@ function alternarVisibilidadeSenha(idCampo, botao) {
   botao.querySelector("i").className = mostrar ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
 }
 
+function abrirModalAlterarSenhaPrincipal() {
+  if (!administradorLogado() || !obterAdminPerfil()?.principal) {
+    alert("Apenas o administrador principal pode alterar a própria senha.");
+    return;
+  }
+
+  const formulario = document.getElementById("formAlterarSenhaPrincipal");
+  formulario.reset();
+  ["novaSenhaPrincipal", "confirmarNovaSenhaPrincipal"].forEach(id => {
+    const campo = document.getElementById(id);
+    campo.type = "password";
+    campo.nextElementSibling.setAttribute("aria-label", id === "novaSenhaPrincipal"
+      ? "Mostrar nova senha"
+      : "Mostrar confirmação da nova senha");
+    campo.nextElementSibling.querySelector("i").className = "fa-solid fa-eye";
+  });
+  abrirModal("modalAlterarSenhaPrincipal");
+}
+
+async function alterarSenhaPrincipal(event) {
+  event.preventDefault();
+
+  const senhaAtual = document.getElementById("senhaAtualPrincipal").value;
+  const novaSenha = document.getElementById("novaSenhaPrincipal").value;
+  const confirmarNovaSenha = document.getElementById("confirmarNovaSenhaPrincipal").value;
+
+  if (novaSenha !== confirmarNovaSenha) {
+    alert("As senhas informadas não conferem.");
+    return;
+  }
+
+  try {
+    const resposta = await apiFetch("/administradores/minha-senha", {
+      method: "PATCH",
+      body: JSON.stringify({ senhaAtual, novaSenha, confirmarNovaSenha })
+    });
+
+    document.getElementById("formAlterarSenhaPrincipal").reset();
+    fecharModal("modalAlterarSenhaPrincipal");
+    alert(resposta.mensagem);
+  } catch (erro) {
+    alert(erro.message);
+  }
+}
+
 // Alterna entre os modais de login, cadastro e recuperação de senha
 function trocarModalAdmin(event, idAtual, idDestino) {
   if (event) event.preventDefault();
@@ -491,6 +536,128 @@ async function copiarTokenConvite() {
   }
 }
 
+// ==========================================
+// GESTÃO DE ADMINISTRADORES (ADMINISTRADOR PRINCIPAL)
+// ==========================================
+
+let adminsGerenciados = [];
+
+async function abrirModalGerenciarAdmins() {
+  cancelarEdicaoAdmin();
+  document.getElementById("senhaTemporariaBox").classList.add("hidden");
+  abrirModal("modalGerenciarAdmins");
+  await carregarAdminsGerenciados();
+}
+
+async function carregarAdminsGerenciados() {
+  const lista = document.getElementById("listaAdminsGerenciados");
+  try {
+    adminsGerenciados = await apiFetch("/administradores");
+    const meuId = obterAdminPerfil()?.id;
+    lista.innerHTML = adminsGerenciados.map(adm => {
+      const gerenciavel = !adm.principal && adm.id !== meuId;
+      const status = adm.principal ? "Principal" : adm.bloqueado ? "Bloqueado" : "Ativo";
+      const acoes = gerenciavel ? `
+        <span class="admin-manage-actions">
+          <button type="button" class="btn-text" onclick="editarAdminGerenciado(${adm.id})" title="Editar"><i class="fa-solid fa-pen"></i></button>
+          <button type="button" class="btn-text" onclick="alternarBloqueioAdmin(${adm.id}, ${!adm.bloqueado})" title="${adm.bloqueado ? "Desbloquear" : "Bloquear"}"><i class="fa-solid ${adm.bloqueado ? "fa-lock-open" : "fa-ban"}"></i></button>
+          <button type="button" class="btn-text" onclick="redefinirSenhaAdminGerenciado(${adm.id})" title="Redefinir senha"><i class="fa-solid fa-key"></i></button>
+          <button type="button" class="btn-text" onclick="removerAdminGerenciado(${adm.id})" title="Remover"><i class="fa-solid fa-trash"></i></button>
+        </span>` : "";
+      return `<li>
+        <span>${escaparHtml(adm.nomeCompleto)} (${escaparHtml(adm.usuario)}) &middot; ${escaparHtml(adm.email)} &middot; <strong>${status}</strong></span>
+        ${acoes}
+      </li>`;
+    }).join("");
+  } catch (erro) {
+    lista.innerHTML = `<li>${escaparHtml(erro.message)}</li>`;
+  }
+}
+
+function mostrarSenhaTemporaria(resultado, rotuloEmail) {
+  const box = document.getElementById("senhaTemporariaBox");
+  if (resultado.enviado) {
+    box.classList.add("hidden");
+    alert(`Senha temporária enviada por e-mail para ${rotuloEmail}.`);
+  } else {
+    document.getElementById("senhaTemporariaValor").textContent = resultado.senhaTemporaria;
+    box.classList.remove("hidden");
+  }
+}
+
+function cancelarEdicaoAdmin() {
+  document.getElementById("formAdminGerenciado").reset();
+  document.getElementById("adminGerenciadoId").value = "";
+  document.getElementById("btnSalvarAdminGerenciado").textContent = "Criar administrador";
+  document.getElementById("btnCancelarEdicaoAdmin").classList.add("hidden");
+}
+
+function editarAdminGerenciado(id) {
+  const adm = adminsGerenciados.find(item => item.id === id);
+  if (!adm) return;
+  document.getElementById("adminGerenciadoId").value = adm.id;
+  document.getElementById("adminGerenciadoNome").value = adm.nomeCompleto;
+  document.getElementById("adminGerenciadoEmail").value = adm.email;
+  document.getElementById("adminGerenciadoUsuario").value = adm.usuario;
+  document.getElementById("btnSalvarAdminGerenciado").textContent = "Salvar alterações";
+  document.getElementById("btnCancelarEdicaoAdmin").classList.remove("hidden");
+}
+
+async function salvarAdminGerenciado(event) {
+  event.preventDefault();
+  const id = document.getElementById("adminGerenciadoId").value;
+  const dados = {
+    nomeCompleto: document.getElementById("adminGerenciadoNome").value.trim(),
+    email: document.getElementById("adminGerenciadoEmail").value.trim(),
+    usuario: document.getElementById("adminGerenciadoUsuario").value.trim()
+  };
+
+  try {
+    if (id) {
+      await apiFetch(`/administradores/${id}`, { method: "PUT", body: JSON.stringify(dados) });
+      document.getElementById("senhaTemporariaBox").classList.add("hidden");
+    } else {
+      const resultado = await apiFetch("/administradores/criar", { method: "POST", body: JSON.stringify(dados) });
+      mostrarSenhaTemporaria(resultado, dados.email);
+    }
+    cancelarEdicaoAdmin();
+    await carregarAdminsGerenciados();
+  } catch (erro) {
+    alert(erro.message);
+  }
+}
+
+async function alternarBloqueioAdmin(id, bloqueado) {
+  if (!confirm(bloqueado ? "Bloquear este administrador? Ele perderá o acesso imediatamente." : "Desbloquear este administrador?")) return;
+  try {
+    await apiFetch(`/administradores/${id}/bloqueio`, { method: "PATCH", body: JSON.stringify({ bloqueado }) });
+    await carregarAdminsGerenciados();
+  } catch (erro) {
+    alert(erro.message);
+  }
+}
+
+async function redefinirSenhaAdminGerenciado(id) {
+  if (!confirm("Gerar uma nova senha temporária para este administrador?")) return;
+  try {
+    const resultado = await apiFetch(`/administradores/${id}/redefinir-senha`, { method: "POST" });
+    const adm = adminsGerenciados.find(item => item.id === id);
+    mostrarSenhaTemporaria(resultado, adm ? adm.email : "o administrador");
+  } catch (erro) {
+    alert(erro.message);
+  }
+}
+
+async function removerAdminGerenciado(id) {
+  if (!confirm("Remover este administrador? As notícias dele passarão para a sua conta.")) return;
+  try {
+    await apiFetch(`/administradores/${id}`, { method: "DELETE" });
+    await carregarAdminsGerenciados();
+  } catch (erro) {
+    alert(erro.message);
+  }
+}
+
 // Atualiza o cabeçalho conforme o estado da sessão administrativa
 function atualizarInterfaceAdmin() {
   const perfil = obterAdminPerfil();
@@ -499,6 +666,8 @@ function atualizarInterfaceAdmin() {
   const nomeSessao = document.getElementById("adminSessaoNome");
   const btnNovaNoticia = document.getElementById("btnNovaNoticia");
   const btnConvidarAdmin = document.getElementById("btnConvidarAdmin");
+  const btnGerenciarAdmins = document.getElementById("btnGerenciarAdmins");
+  const btnAlterarSenhaPrincipal = document.getElementById("btnAlterarSenhaPrincipal");
   const acompanhamentoAdministrativo = document.getElementById("acompanhamentoAdministrativo");
   const botoesRelatorio = [
     document.getElementById("btnImprimirRelatorioChamados"),
@@ -511,6 +680,8 @@ function atualizarInterfaceAdmin() {
     if (nomeSessao) nomeSessao.textContent = `Olá, ${perfil.nomeCompleto.split(" ")[0]}`;
     if (btnNovaNoticia) btnNovaNoticia.classList.remove("hidden");
     if (btnConvidarAdmin) btnConvidarAdmin.classList.toggle("hidden", !perfil.principal);
+    if (btnGerenciarAdmins) btnGerenciarAdmins.classList.toggle("hidden", !perfil.principal);
+    if (btnAlterarSenhaPrincipal) btnAlterarSenhaPrincipal.classList.toggle("hidden", !perfil.principal);
     if (acompanhamentoAdministrativo) acompanhamentoAdministrativo.classList.remove("hidden");
     botoesRelatorio.forEach(botao => botao?.classList.remove("hidden"));
   } else {
@@ -518,6 +689,8 @@ function atualizarInterfaceAdmin() {
     if (badgeSessao) badgeSessao.classList.add("hidden");
     if (btnNovaNoticia) btnNovaNoticia.classList.add("hidden");
     if (btnConvidarAdmin) btnConvidarAdmin.classList.add("hidden");
+    if (btnGerenciarAdmins) btnGerenciarAdmins.classList.add("hidden");
+    if (btnAlterarSenhaPrincipal) btnAlterarSenhaPrincipal.classList.add("hidden");
     if (acompanhamentoAdministrativo) acompanhamentoAdministrativo.classList.add("hidden");
     botoesRelatorio.forEach(botao => botao?.classList.add("hidden"));
   }

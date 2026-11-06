@@ -122,6 +122,7 @@ const options = {
             email: { type: "string" },
             usuario: { type: "string" },
             principal: { type: "boolean" },
+            bloqueado: { type: "boolean" },
             dataCadastro: { type: "string", format: "date-time" }
           }
         },
@@ -131,6 +132,15 @@ const options = {
           properties: {
             usuario: { type: "string" },
             senha: { type: "string", format: "password" }
+          }
+        },
+        AlterarSenhaAdministrador: {
+          type: "object",
+          required: ["senhaAtual", "novaSenha", "confirmarNovaSenha"],
+          properties: {
+            senhaAtual: { type: "string", format: "password" },
+            novaSenha: { type: "string", format: "password", minLength: 6 },
+            confirmarNovaSenha: { type: "string", format: "password" }
           }
         },
         TokenAdministrador: {

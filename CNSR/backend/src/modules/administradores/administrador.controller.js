@@ -34,6 +34,11 @@ const login = asyncHandler(async (req, res) => {
   res.json({ token, administrador: paraSaidaAdministrador(administrador) });
 });
 
+const alterarMinhaSenha = asyncHandler(async (req, res) => {
+  await service.alterarSenhaPropria(req.administrador.id, req.body.senhaAtual, req.body.novaSenha);
+  res.json({ mensagem: "Senha alterada com sucesso." });
+});
+
 const recuperarSenha = asyncHandler(async (req, res) => {
   const { senhaTemporaria, enviado } = await service.recuperarSenha(req.body.email);
   res.json({
@@ -61,8 +66,39 @@ const atualizar = asyncHandler(async (req, res) => {
 });
 
 const remover = asyncHandler(async (req, res) => {
-  await service.removerAdministrador(Number(req.params.id));
+  await service.removerAdministrador(Number(req.params.id), req.administrador.id);
   res.status(204).send();
 });
 
-module.exports = { cadastrar, criarConvite, listarConvites, revogarConvite, login, recuperarSenha, listar, buscarPorId, atualizar, remover };
+const criarPeloPrincipal = asyncHandler(async (req, res) => {
+  const { administrador, senhaTemporaria, enviado } = await service.criarAdministradorPeloPrincipal(req.body);
+  res.status(201).json({
+    ...paraSaidaAdministrador(administrador),
+    enviado,
+    ...(!enviado && { senhaTemporaria }),
+    mensagem: enviado
+      ? "Conta criada. A senha temporária foi enviada por e-mail."
+      : "Conta criada. E-mail não enviado: entregue a senha temporária por um canal seguro; ela não será exibida novamente."
+  });
+});
+
+const alterarBloqueio = asyncHandler(async (req, res) => {
+  const administrador = await service.alterarBloqueio(Number(req.params.id), req.body.bloqueado, req.administrador.id);
+  res.json(paraSaidaAdministrador(administrador));
+});
+
+const redefinirSenha = asyncHandler(async (req, res) => {
+  const { senhaTemporaria, enviado } = await service.redefinirSenhaAdministrador(Number(req.params.id));
+  res.json({
+    enviado,
+    ...(!enviado && { senhaTemporaria }),
+    mensagem: enviado
+      ? "Senha temporária enviada por e-mail ao administrador."
+      : "E-mail não enviado. Entregue a senha temporária por um canal seguro; ela não será exibida novamente."
+  });
+});
+
+module.exports = {
+  cadastrar, criarConvite, listarConvites, revogarConvite, login, alterarMinhaSenha, recuperarSenha,
+  listar, buscarPorId, atualizar, remover, criarPeloPrincipal, alterarBloqueio, redefinirSenha
+};

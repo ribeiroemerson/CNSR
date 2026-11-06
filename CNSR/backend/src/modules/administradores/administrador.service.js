@@ -111,6 +111,10 @@ async function autenticarAdministrador(usuario, senha) {
   const senhaValida = await bcrypt.compare(senha, administrador.senhaHash);
   if (!senhaValida) throw new AppError("Usuário ou senha inválidos.", 401);
 
+  if (administrador.bloqueado) {
+    throw new AppError("Esta conta está bloqueada. Procure o administrador principal.", 403);
+  }
+
   const token = jwt.sign(
     { id: administrador.id, usuario: administrador.usuario },
     process.env.JWT_SECRET,
@@ -120,25 +124,47 @@ async function autenticarAdministrador(usuario, senha) {
   return { token, administrador };
 }
 
-// Se o Gmail estiver configurado, a senha temporária vai por e-mail ao próprio administrador; senão volta ao principal
-async function recuperarSenha(email) {
-  const administrador = await repository.buscarPorEmail(email);
-  if (!administrador) throw new AppError("Nenhum administrador encontrado com este e-mail.", 404);
+async function alterarSenhaPropria(id, senhaAtual, novaSenha) {
+  const administrador = await buscarAdministradorPorId(id);
+  const senhaAtualValida = await bcrypt.compare(senhaAtual, administrador.senhaHash);
+  if (!senhaAtualValida) throw new AppError("A senha atual está incorreta.", 400);
 
+  if (senhaAtual === novaSenha) {
+    throw new AppError("A nova senha deve ser diferente da senha atual.", 400);
+  }
+
+  const senhaHash = await bcrypt.hash(novaSenha, SALT_ROUNDS);
+  await repository.atualizarSenha(id, senhaHash);
+}
+
+// Gera e grava uma senha temporária; se o Gmail estiver configurado, ela vai por e-mail ao administrador
+async function gerarSenhaTemporaria(administrador, assunto, abertura) {
   const senhaTemporaria = crypto.randomBytes(6).toString("hex");
   const senhaHash = await bcrypt.hash(senhaTemporaria, SALT_ROUNDS);
   await repository.atualizarSenha(administrador.id, senhaHash);
 
   const enviado = await enviarEmail({
     para: administrador.email,
-    assunto: "Senha temporária - Conecta Nova Santa Rita",
+    assunto,
     texto:
-      `Olá, ${administrador.nomeCompleto}.\n\n` +
-      `Sua senha temporária é: ${senhaTemporaria}\n\n` +
+      `Olá, ${administrador.nomeCompleto}.\n\n${abertura}\n\n` +
+      `Senha temporária: ${senhaTemporaria}\n\n` +
       "Entre com ela e altere a senha assim que possível."
   });
 
   return { senhaTemporaria, enviado };
+}
+
+async function recuperarSenha(email) {
+  const administrador = await repository.buscarPorEmail(email);
+  if (!administrador) throw new AppError("Nenhum administrador encontrado com este e-mail.", 404);
+
+  return gerarSenhaTemporaria(administrador, "Senha temporária - Conecta Nova Santa Rita", "Sua senha foi redefinida.");
+}
+
+async function redefinirSenhaAdministrador(id) {
+  const administrador = await buscarAdministradorPorId(id);
+  return gerarSenhaTemporaria(administrador, "Senha temporária - Conecta Nova Santa Rita", "Sua senha foi redefinida pelo administrador principal.");
 }
 
 async function listarAdministradores() {
@@ -151,14 +177,58 @@ async function buscarAdministradorPorId(id) {
   return administrador;
 }
 
-async function atualizarAdministrador(id, dados) {
-  await buscarAdministradorPorId(id);
-  return repository.atualizar(id, dados);
+// O principal cria a conta diretamente; a senha temporária é gerada pelo sistema
+async function criarAdministradorPeloPrincipal({ nomeCompleto, email, usuario }) {
+  const emailNormalizado = normalizarEmail(email);
+
+  const existente = await repository.buscarPorUsuarioOuEmail(usuario, emailNormalizado);
+  if (existente) throw new AppError("Já existe um administrador com este usuário ou e-mail.", 409);
+
+  const administrador = await repository.criar({
+    nomeCompleto,
+    email: emailNormalizado,
+    usuario,
+    senhaHash: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), SALT_ROUNDS)
+  });
+
+  const credenciais = await gerarSenhaTemporaria(
+    administrador,
+    "Sua conta de administrador - Conecta Nova Santa Rita",
+    `Sua conta de administrador foi criada. Usuário: ${usuario}`
+  );
+
+  return { administrador, ...credenciais };
 }
 
-async function removerAdministrador(id) {
+async function atualizarAdministrador(id, dados) {
   await buscarAdministradorPorId(id);
-  return repository.remover(id);
+
+  const alteracoes = { ...dados };
+  if (alteracoes.email) alteracoes.email = normalizarEmail(alteracoes.email);
+
+  const conflito = await repository.buscarConflito(id, alteracoes.usuario, alteracoes.email);
+  if (conflito) throw new AppError("Já existe um administrador com este usuário ou e-mail.", 409);
+
+  return repository.atualizar(id, alteracoes);
+}
+
+// O principal não pode ser bloqueado nem removido, e ninguém age sobre a própria conta
+async function buscarAdministradorGerenciavel(id, solicitanteId, acao) {
+  const administrador = await buscarAdministradorPorId(id);
+  if (administrador.principal || administrador.id === solicitanteId) {
+    throw new AppError(`Não é possível ${acao} a conta do administrador principal.`, 400);
+  }
+  return administrador;
+}
+
+async function alterarBloqueio(id, bloqueado, solicitanteId) {
+  await buscarAdministradorGerenciavel(id, solicitanteId, "bloquear");
+  return repository.atualizar(id, { bloqueado });
+}
+
+async function removerAdministrador(id, solicitanteId) {
+  await buscarAdministradorGerenciavel(id, solicitanteId, "remover");
+  await repository.removerTransferindoNoticias(id, solicitanteId);
 }
 
 module.exports = {
@@ -167,7 +237,11 @@ module.exports = {
   listarConvites,
   revogarConvite,
   autenticarAdministrador,
+  alterarSenhaPropria,
   recuperarSenha,
+  redefinirSenhaAdministrador,
+  criarAdministradorPeloPrincipal,
+  alterarBloqueio,
   listarAdministradores,
   buscarAdministradorPorId,
   atualizarAdministrador,

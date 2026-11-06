@@ -5,6 +5,9 @@ const { validate } = require("../../middlewares/validate");
 const { autenticar, exigirAdministradorPrincipal } = require("../../middlewares/auth");
 const {
   cadastrarAdministradorSchema,
+  criarAdministradorSchema,
+  bloqueioAdministradorSchema,
+  alterarSenhaPropriaSchema,
   criarConviteSchema,
   loginAdministradorSchema,
   recuperarSenhaSchema,
@@ -157,6 +160,39 @@ router.post("/login", limitadorAutenticacao, validate(loginAdministradorSchema),
 
 /**
  * @openapi
+ * /administradores/minha-senha:
+ *   patch:
+ *     summary: Altera a senha do administrador principal autenticado
+ *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AlterarSenhaAdministrador'
+ *     responses:
+ *       200:
+ *         description: Senha alterada
+ *       400:
+ *         description: Senha atual incorreta ou dados inválidos
+ *       401:
+ *         description: Autenticação necessária
+ *       403:
+ *         description: Apenas o administrador principal pode alterar a própria senha por esta rota
+ */
+router.patch(
+  "/minha-senha",
+  autenticar,
+  exigirAdministradorPrincipal,
+  limitadorAutenticacao,
+  validate(alterarSenhaPropriaSchema),
+  controller.alterarMinhaSenha
+);
+
+/**
+ * @openapi
  * /administradores/recuperar-senha:
  *   post:
  *     summary: Gera senha temporária para um administrador (apenas administrador principal)
@@ -227,10 +263,12 @@ router.post("/recuperar-senha", autenticar, exigirAdministradorPrincipal, valida
  *     responses:
  *       200:
  *         description: Administrador atualizado
+ *       409:
+ *         description: Usuário ou e-mail já em uso
  *       404:
  *         description: Administrador não encontrado
  *   delete:
- *     summary: Remove um administrador
+ *     summary: Remove um administrador (apenas principal; as notícias passam ao principal)
  *     tags: [Administradores]
  *     security:
  *       - bearerAuth: []
@@ -243,13 +281,86 @@ router.post("/recuperar-senha", autenticar, exigirAdministradorPrincipal, valida
  *     responses:
  *       204:
  *         description: Administrador removido
+ *       400:
+ *         description: Não é possível remover o principal nem a própria conta
  *       404:
  *         description: Administrador não encontrado
+ * /administradores/criar:
+ *   post:
+ *     summary: Cria um administrador diretamente (apenas principal); gera senha temporária
+ *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [nomeCompleto, email, usuario]
+ *             properties:
+ *               nomeCompleto:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               usuario:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Conta criada; senha temporária enviada por e-mail ou devolvida uma única vez
+ *       409:
+ *         description: Usuário ou e-mail já em uso
+ * /administradores/{id}/bloqueio:
+ *   patch:
+ *     summary: Bloqueia ou desbloqueia um administrador (apenas principal)
+ *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [bloqueado]
+ *             properties:
+ *               bloqueado:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Situação da conta atualizada
+ *       400:
+ *         description: Não é possível bloquear o principal nem a própria conta
+ * /administradores/{id}/redefinir-senha:
+ *   post:
+ *     summary: Gera nova senha temporária para um administrador (apenas principal)
+ *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Senha temporária enviada por e-mail ou devolvida uma única vez
  */
-// Gestão de administradores: restrita a administradores autenticados
-router.get("/", autenticar, controller.listar);
-router.get("/:id", autenticar, controller.buscarPorId);
-router.put("/:id", autenticar, validate(atualizarAdministradorSchema), controller.atualizar);
-router.delete("/:id", autenticar, controller.remover);
+// Gestão de administradores: restrita ao administrador principal
+router.post("/criar", autenticar, exigirAdministradorPrincipal, validate(criarAdministradorSchema), controller.criarPeloPrincipal);
+router.get("/", autenticar, exigirAdministradorPrincipal, controller.listar);
+router.get("/:id", autenticar, exigirAdministradorPrincipal, controller.buscarPorId);
+router.put("/:id", autenticar, exigirAdministradorPrincipal, validate(atualizarAdministradorSchema), controller.atualizar);
+router.patch("/:id/bloqueio", autenticar, exigirAdministradorPrincipal, validate(bloqueioAdministradorSchema), controller.alterarBloqueio);
+router.post("/:id/redefinir-senha", autenticar, exigirAdministradorPrincipal, controller.redefinirSenha);
+router.delete("/:id", autenticar, exigirAdministradorPrincipal, controller.remover);
 
 module.exports = router;

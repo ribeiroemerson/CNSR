@@ -119,6 +119,32 @@ describe("Administradores", () => {
     tokenComum = resposta.body.token;
   });
 
+  it("deve exigir autenticação para alterar a própria senha", async () => {
+    const resposta = await request(app)
+      .patch("/api/administradores/minha-senha")
+      .send({ senhaAtual: senhaPrincipal, novaSenha: "novaSenha123", confirmarNovaSenha: "novaSenha123" });
+
+    expect(resposta.status).toBe(401);
+  });
+
+  it("deve permitir a alteração somente ao administrador principal", async () => {
+    const resposta = await request(app)
+      .patch("/api/administradores/minha-senha")
+      .set("Authorization", `Bearer ${tokenComum}`)
+      .send({ senhaAtual: dadosAdmin.senha, novaSenha: "novaSenha123", confirmarNovaSenha: "novaSenha123" });
+
+    expect(resposta.status).toBe(403);
+  });
+
+  it("deve rejeitar a alteração quando a senha atual está incorreta", async () => {
+    const resposta = await request(app)
+      .patch("/api/administradores/minha-senha")
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaAtual: "senha-incorreta", novaSenha: "novaSenha123", confirmarNovaSenha: "novaSenha123" });
+
+    expect(resposta.status).toBe(400);
+  });
+
   it("deve rejeitar login com senha incorreta", async () => {
     const resposta = await request(app)
       .post("/api/administradores/login")
@@ -161,5 +187,23 @@ describe("Administradores", () => {
       .post("/api/administradores")
       .send({ ...dadosAdmin, email: emailRevogado, usuario: `rev${sufixo}`, tokenConvite: criado.body.token });
     expect(tentativa.status).toBe(403);
+  });
+
+  it("deve alterar a senha do administrador principal e não expor a senha", async () => {
+    const novaSenha = "novaSenhaPrincipal123";
+    const resposta = await request(app)
+      .patch("/api/administradores/minha-senha")
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaAtual: senhaPrincipal, novaSenha, confirmarNovaSenha: novaSenha });
+
+    expect(resposta.status).toBe(200);
+    expect(resposta.body.mensagem).toBe("Senha alterada com sucesso.");
+    expect(resposta.body).not.toHaveProperty("senha");
+    expect(resposta.body).not.toHaveProperty("senhaHash");
+
+    const login = await request(app)
+      .post("/api/administradores/login")
+      .send({ usuario: dadosPrincipal.usuario, senha: novaSenha });
+    expect(login.status).toBe(200);
   });
 });

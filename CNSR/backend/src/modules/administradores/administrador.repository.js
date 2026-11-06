@@ -84,6 +84,23 @@ function remover(id) {
   return prisma.administrador.delete({ where: { id } });
 }
 
+// Notícias não têm exclusão em cascata: passam para outro administrador antes da remoção
+function removerTransferindoNoticias(id, novoAutorId) {
+  return prisma.$transaction([
+    prisma.noticia.updateMany({ where: { administradorId: id }, data: { administradorId: novoAutorId } }),
+    prisma.administrador.delete({ where: { id } })
+  ]);
+}
+
+// Procura outro administrador (diferente de "id") que já use o usuário ou o e-mail
+function buscarConflito(id, usuario, email) {
+  const filtros = [];
+  if (usuario) filtros.push({ usuario });
+  if (email) filtros.push({ email: { equals: email, mode: "insensitive" } });
+  if (!filtros.length) return Promise.resolve(null);
+  return prisma.administrador.findFirst({ where: { id: { not: id }, OR: filtros } });
+}
+
 module.exports = {
   criar,
   listarTodos,
@@ -93,6 +110,8 @@ module.exports = {
   buscarPorUsuarioOuEmail,
   buscarPorEmailSemCaixa,
   existePrincipal,
+  buscarConflito,
+  removerTransferindoNoticias,
 
   buscarConvitePorTokenHash,
   criarConvite,

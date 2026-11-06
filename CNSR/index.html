@@ -47,6 +47,12 @@
           <button type="button" id="btnConvidarAdmin" class="btn-text hidden" onclick="abrirModalConvites()">
             <i class="fa-solid fa-envelope-open-text"></i> Convidar
           </button>
+          <button type="button" id="btnGerenciarAdmins" class="btn-text hidden" onclick="abrirModalGerenciarAdmins()">
+            <i class="fa-solid fa-users-gear"></i> Administradores
+          </button>
+          <button type="button" id="btnAlterarSenhaPrincipal" class="btn-text hidden" onclick="abrirModalAlterarSenhaPrincipal()">
+            <i class="fa-solid fa-key"></i> Alterar senha
+          </button>
           <button type="button" class="btn-text" onclick="sairAdministrador()">Sair</button>
         </div>
       </div>
@@ -530,6 +536,81 @@
       </form>
 
       <button type="button" class="btn btn-secondary btn-full" onclick="fecharModal('modalConvitesAdmin')">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE GESTÃO DE ADMINISTRADORES (ADMINISTRADOR PRINCIPAL) -->
+  <div id="modalGerenciarAdmins" class="modal-overlay">
+    <div class="modal-card modal-wide">
+      <h3 class="modal-title">Gerenciar Administradores</h3>
+      <p class="modal-desc">Crie, edite, bloqueie, redefina a senha ou remova contas de administrador.</p>
+
+      <form id="formAdminGerenciado" onsubmit="salvarAdminGerenciado(event)">
+        <input type="hidden" id="adminGerenciadoId">
+        <div class="form-group full-width">
+          <label for="adminGerenciadoNome">Nome completo</label>
+          <input type="text" id="adminGerenciadoNome" class="form-control" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="adminGerenciadoEmail">E-mail</label>
+          <input type="email" id="adminGerenciadoEmail" class="form-control" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="adminGerenciadoUsuario">Usuário</label>
+          <input type="text" id="adminGerenciadoUsuario" class="form-control" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="btnSalvarAdminGerenciado" class="btn btn-primary">Criar administrador</button>
+          <button type="button" id="btnCancelarEdicaoAdmin" class="btn btn-outline hidden" onclick="cancelarEdicaoAdmin()">Cancelar edição</button>
+        </div>
+      </form>
+
+      <div id="senhaTemporariaBox" class="hidden">
+        <p class="modal-desc">Senha temporária (copie agora, não será exibida novamente):</p>
+        <div class="protocol-box invite-token" id="senhaTemporariaValor"></div>
+      </div>
+
+      <h4 class="invite-list-title">Contas de administrador</h4>
+      <ul id="listaAdminsGerenciados" class="invite-list admin-manage-list"></ul>
+
+      <button type="button" class="btn btn-secondary btn-full" onclick="fecharModal('modalGerenciarAdmins')">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL PARA ALTERAR A SENHA DO ADMINISTRADOR PRINCIPAL -->
+  <div id="modalAlterarSenhaPrincipal" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title">Alterar minha senha</h3>
+      <p class="modal-desc">Confirme sua senha atual e escolha uma nova senha com pelo menos 6 caracteres.</p>
+
+      <form id="formAlterarSenhaPrincipal" onsubmit="alterarSenhaPrincipal(event)">
+        <div class="form-group full-width">
+          <label for="senhaAtualPrincipal">Senha atual</label>
+          <input type="password" id="senhaAtualPrincipal" class="form-control" autocomplete="current-password" required>
+        </div>
+        <div class="form-group full-width">
+          <label for="novaSenhaPrincipal">Nova senha</label>
+          <div class="password-field">
+            <input type="password" id="novaSenhaPrincipal" class="form-control" autocomplete="new-password" required minlength="6">
+            <button type="button" class="toggle-password" onclick="alternarVisibilidadeSenha('novaSenhaPrincipal', this)" aria-label="Mostrar nova senha">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="form-group full-width">
+          <label for="confirmarNovaSenhaPrincipal">Confirmar nova senha</label>
+          <div class="password-field">
+            <input type="password" id="confirmarNovaSenhaPrincipal" class="form-control" autocomplete="new-password" required minlength="6">
+            <button type="button" class="toggle-password" onclick="alternarVisibilidadeSenha('confirmarNovaSenhaPrincipal', this)" aria-label="Mostrar confirmação da nova senha">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="fecharModal('modalAlterarSenhaPrincipal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-key"></i> Salvar nova senha</button>
+        </div>
+      </form>
     </div>
   </div>
 

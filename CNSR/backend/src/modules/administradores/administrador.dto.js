@@ -31,10 +31,35 @@ const recuperarSenhaSchema = z.object({
   email: z.string().trim().email("Informe um e-mail válido.")
 });
 
+// DTO de entrada: criação direta de administrador pelo principal (a senha temporária é gerada pelo sistema)
+const criarAdministradorSchema = z.object({
+  nomeCompleto: z.string().trim().min(1, "O nome completo é obrigatório."),
+  email: z.string().trim().email("Informe um e-mail válido."),
+  usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres.")
+});
+
+// DTO de entrada: bloqueio ou desbloqueio
+const bloqueioAdministradorSchema = z.object({
+  bloqueado: z.boolean({ required_error: "Informe se a conta deve ficar bloqueada." })
+});
+
+// DTO de entrada: alteração da própria senha pelo administrador principal
+const alterarSenhaPropriaSchema = z
+  .object({
+    senhaAtual: z.string().min(1, "Informe sua senha atual."),
+    novaSenha: z.string().min(6, "A nova senha deve ter ao menos 6 caracteres."),
+    confirmarNovaSenha: z.string().min(1, "Confirme sua nova senha.")
+  })
+  .refine(dados => dados.novaSenha === dados.confirmarNovaSenha, {
+    message: "As senhas informadas não conferem.",
+    path: ["confirmarNovaSenha"]
+  });
+
 // DTO de entrada: atualização parcial de cadastro
 const atualizarAdministradorSchema = z.object({
   nomeCompleto: z.string().trim().min(1, "O nome completo é obrigatório.").optional(),
-  email: z.string().trim().email("Informe um e-mail válido.").optional()
+  email: z.string().trim().email("Informe um e-mail válido.").optional(),
+  usuario: z.string().trim().min(3, "O usuário deve ter ao menos 3 caracteres.").optional()
 });
 
 // DTO de saída: nunca expõe o hash da senha
@@ -45,6 +70,7 @@ function paraSaidaAdministrador(administrador) {
     email: administrador.email,
     usuario: administrador.usuario,
     principal: administrador.principal,
+    bloqueado: administrador.bloqueado,
     dataCadastro: administrador.dataCadastro
   };
 }
@@ -61,6 +87,9 @@ function paraSaidaConvite(convite) {
 
 module.exports = {
   cadastrarAdministradorSchema,
+  criarAdministradorSchema,
+  bloqueioAdministradorSchema,
+  alterarSenhaPropriaSchema,
   criarConviteSchema,
   paraSaidaConvite,
   loginAdministradorSchema,
