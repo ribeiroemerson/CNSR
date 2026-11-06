@@ -834,6 +834,22 @@ body {
 }
 
 /* CONVITES DE ADMINISTRADOR */
+#modalConvitesAdmin .modal-card {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#modalConvitesAdmin .invite-list li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#modalConvitesAdmin .invite-list li > button {
+  flex-shrink: 0;
+}
+
 .invite-token {
   font-size: 0.95rem;
   word-break: break-all;
