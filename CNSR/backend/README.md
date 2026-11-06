@@ -11,9 +11,9 @@ API REST em Node.js/Express para o projeto **Conecta Nova Santa Rita**, com pers
 
 1. `cp .env.example .env` e preencha `DATABASE_URL` (PostgreSQL), `JWT_SECRET` e `ADMIN_PRINCIPAL_EMAIL`.
 
-> **Envio por Gmail (opcional):** defina `GMAIL_USER` e `GMAIL_APP_PASSWORD` (uma "Senha de app" da conta Google, com verificação em 2 etapas — nunca a senha normal). Com isso, o token de convite e a senha temporária são enviados por e-mail e não aparecem na resposta da API. Sem a configuração (ou se o envio falhar), a senha temporária só é devolvida depois que o administrador principal confirma sua senha de acesso.
+> **Envio por Gmail (opcional):** defina `GMAIL_USER` e `GMAIL_APP_PASSWORD` (uma "Senha de app" da conta Google, com verificação em 2 etapas — nunca a senha normal). O token de convite e a senha temporária são enviados por e-mail quando possível. O token de um convite pendente pode ser consultado pelo principal após confirmar sua senha, mesmo que o e-mail tenha sido enviado. Se o envio da senha temporária falhar, ela só é devolvida após a confirmação da senha do principal.
 >
-> **Cadastro de administradores:** é restrito. O e-mail definido em `ADMIN_PRINCIPAL_EMAIL` pode criar o primeiro administrador (principal) sem token. Depois, só o principal gera convites (`POST /api/administradores/convites`); o token é de uso único, vale 48h, só funciona com o e-mail convidado e fica salvo apenas como hash. Aplique a migration com `npm run db:deploy`.
+> **Cadastro de administradores:** é restrito. O e-mail definido em `ADMIN_PRINCIPAL_EMAIL` pode criar o primeiro administrador (principal) sem token. Depois, só o principal gera convites (`POST /api/administradores/convites`); o token é de uso único, vale 48h e só funciona com o e-mail convidado. O banco guarda apenas o hash e um valor aleatório que permite regenerar o token usando o `JWT_SECRET` mantido fora do banco. A alteração de `JWT_SECRET` invalida a visualização dos tokens pendentes; convites anteriores a esta mudança também não são recuperáveis e precisam ser gerados novamente. Aplique a migration com `npm run db:deploy`.
 2. `npm install`
 3. `npx prisma migrate dev --name init`
 4. `npm run dev`
@@ -72,6 +72,7 @@ Passos:
 | POST   | /api/administradores               | não (token de convite) | Cadastro restrito de administrador |
 | POST   | /api/administradores/convites      | admin principal | Gera token de convite para um e-mail |
 | GET    | /api/administradores/convites      | admin principal | Lista convites pendentes          |
+| POST   | /api/administradores/convites/:id/token | admin principal + confirmação da senha | Visualiza token de convite pendente |
 | DELETE | /api/administradores/convites/:id  | admin principal | Revoga um convite pendente        |
 | POST   | /api/administradores/criar         | admin principal + confirmação da senha | Cria administrador e gera senha temporária |
 | POST   | /api/administradores/:id/redefinir-senha | admin principal + confirmação da senha | Gera nova senha temporária |

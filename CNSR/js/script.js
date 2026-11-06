@@ -373,6 +373,9 @@ async function autenticarAdministrador(event) {
 function sairAdministrador() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(ADMIN_PERFIL_KEY);
+  ocultarTokenConvite();
+  cancelarConfirmacaoSenhaPrincipal();
+  fecharModal("modalConvitesAdmin");
   atualizarInterfaceAdmin();
   carregarChamados();
   carregarNoticias();
@@ -464,10 +467,21 @@ function trocarModalAdmin(event, idAtual, idDestino) {
 // ==========================================
 
 async function abrirModalConvites() {
-  document.getElementById("conviteGeradoBox").classList.add("hidden");
+  ocultarTokenConvite();
   document.getElementById("formConviteAdmin").reset();
   abrirModal("modalConvitesAdmin");
   await carregarConvitesPendentes();
+}
+
+function ocultarTokenConvite() {
+  document.getElementById("conviteGeradoBox").classList.add("hidden");
+  document.getElementById("conviteGeradoToken").textContent = "";
+  document.getElementById("conviteGeradoEmail").textContent = "";
+}
+
+function fecharModalConvites() {
+  ocultarTokenConvite();
+  fecharModal("modalConvitesAdmin");
 }
 
 async function carregarConvitesPendentes() {
@@ -478,6 +492,9 @@ async function carregarConvitesPendentes() {
       ? convites.map(convite => `
           <li>
             <span>${escaparHtml(convite.email)} &middot; expira em ${new Date(convite.expiraEm).toLocaleString("pt-BR")}</span>
+            ${convite.tokenDisponivel
+              ? `<button type="button" class="btn-text" onclick="visualizarTokenConvite(${convite.id})" title="Visualizar token" aria-label="Visualizar token de ${escaparHtml(convite.email)}"><i class="fa-solid fa-eye"></i></button>`
+              : "<span>Token antigo indisponível; gere outro convite.</span>"}
             <button type="button" class="btn-text" onclick="revogarConviteAdministrador(${convite.id})" title="Revogar convite">
               <i class="fa-solid fa-trash"></i>
             </button>
@@ -493,18 +510,16 @@ async function gerarConviteAdministrador(event) {
   const email = document.getElementById("emailConviteAdmin").value.trim();
 
   try {
+    ocultarTokenConvite();
     const convite = await apiFetch("/administradores/convites", {
       method: "POST",
       body: JSON.stringify({ email })
     });
 
-    const boxToken = document.getElementById("conviteGeradoBox");
     if (convite.enviado) {
-      boxToken.classList.add("hidden");
       alert(`Convite enviado por e-mail para ${email}.`);
     } else {
-      document.getElementById("conviteGeradoToken").textContent = convite.token;
-      boxToken.classList.remove("hidden");
+      alert("O e-mail não foi enviado. Use o botão de visualização na lista para acessar o token.");
     }
     document.getElementById("formConviteAdmin").reset();
     await carregarConvitesPendentes();
@@ -513,11 +528,26 @@ async function gerarConviteAdministrador(event) {
   }
 }
 
+function visualizarTokenConvite(id) {
+  ocultarTokenConvite();
+  solicitarConfirmacaoSenhaPrincipal(async senhaPrincipal => {
+    const resultado = await apiFetch(`/administradores/convites/${id}/token`, {
+      method: "POST",
+      body: JSON.stringify({ senhaPrincipal })
+    });
+    if (!administradorLogado() || !document.getElementById("modalConvitesAdmin").classList.contains("active")) return;
+    document.getElementById("conviteGeradoEmail").textContent = `E-mail: ${resultado.email}`;
+    document.getElementById("conviteGeradoToken").textContent = resultado.token;
+    document.getElementById("conviteGeradoBox").classList.remove("hidden");
+  });
+}
+
 async function revogarConviteAdministrador(id) {
   if (!confirm("Deseja revogar este convite?")) return;
 
   try {
     await apiFetch(`/administradores/convites/${id}`, { method: "DELETE" });
+    ocultarTokenConvite();
     await carregarConvitesPendentes();
   } catch (erro) {
     alert(erro.message);

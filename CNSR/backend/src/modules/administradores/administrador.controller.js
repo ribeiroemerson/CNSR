@@ -1,6 +1,7 @@
 const service = require("./administrador.service");
 const { paraSaidaAdministrador, paraSaidaConvite } = require("./administrador.dto");
 const { asyncHandler } = require("../../utils/asyncHandler");
+const { AppError } = require("../../utils/appError");
 
 const cadastrar = asyncHandler(async (req, res) => {
   const administrador = await service.cadastrarAdministrador(req.body);
@@ -8,20 +9,28 @@ const cadastrar = asyncHandler(async (req, res) => {
 });
 
 const criarConvite = asyncHandler(async (req, res) => {
-  const { convite, token, enviado } = await service.criarConvite(req.administrador.id, req.body.email);
+  const { convite, enviado } = await service.criarConvite(req.administrador.id, req.body.email);
   res.status(201).json({
     ...paraSaidaConvite(convite),
     enviado,
-    ...(!enviado && { token }),
     mensagem: enviado
       ? "Convite enviado por e-mail."
-      : "E-mail não enviado (Gmail não configurado ou falhou). Entregue este token ao convidado; ele não será exibido novamente."
+      : "E-mail não enviado. Confirme sua senha para visualizar e entregar o token por um canal seguro."
   });
 });
 
 const listarConvites = asyncHandler(async (req, res) => {
   const convites = await service.listarConvites();
   res.json(convites.map(paraSaidaConvite));
+});
+
+const visualizarTokenConvite = asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) throw new AppError("Identificador de convite inválido.", 400);
+  const resultado = await service.visualizarTokenConvite(
+    req.administrador.id, id, req.body.senhaPrincipal
+  );
+  res.set("Cache-Control", "no-store").json(resultado);
 });
 
 const revogarConvite = asyncHandler(async (req, res) => {
@@ -112,6 +121,6 @@ const redefinirSenha = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  cadastrar, criarConvite, listarConvites, revogarConvite, login, alterarMinhaSenha, recuperarSenha,
+  cadastrar, criarConvite, listarConvites, visualizarTokenConvite, revogarConvite, login, alterarMinhaSenha, recuperarSenha,
   listar, buscarPorId, atualizar, remover, criarPeloPrincipal, alterarBloqueio, redefinirSenha
 };

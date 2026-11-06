@@ -55,6 +55,12 @@ function listarConvitesPendentes() {
   });
 }
 
+function buscarConvitePendente(id) {
+  return prisma.conviteAdministrador.findFirst({
+    where: { id, usadoEm: null, expiraEm: { gt: new Date() } }
+  });
+}
+
 function removerConvitePendente(id) {
   return prisma.conviteAdministrador.deleteMany({ where: { id, usadoEm: null } });
 }
@@ -65,7 +71,7 @@ function criarComConvite(dadosAdministrador, conviteId) {
   return prisma.$transaction(async tx => {
     const consumido = await tx.conviteAdministrador.updateMany({
       where: { id: conviteId, usadoEm: null, expiraEm: { gt: new Date() } },
-      data: { usadoEm: new Date() }
+      data: { usadoEm: new Date(), tokenNonce: null }
     });
     if (consumido.count !== 1) return null;
     return tx.administrador.create({ data: dadosAdministrador });
@@ -117,6 +123,7 @@ module.exports = {
   criarConvite,
   removerConvitesPendentesPorEmail,
   listarConvitesPendentes,
+  buscarConvitePendente,
   removerConvitePendente,
   criarComConvite,
   atualizarSenha,

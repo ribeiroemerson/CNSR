@@ -16,6 +16,15 @@ function gerarHashToken(token) {
   return crypto.createHash("sha256").update(String(token).trim()).digest("hex");
 }
 
+function gerarTokenConvite(tokenNonce) {
+  const segredo = process.env.JWT_SECRET;
+  if (!segredo) throw new Error("JWT_SECRET não configurado para gerar tokens de convite.");
+  return crypto.createHmac("sha256", segredo)
+    .update("cnsr:convite-administrador:v1:")
+    .update(tokenNonce)
+    .digest("base64url");
+}
+
 // Valida o convite sem revelar o motivo da recusa (inexistente, expirado, usado ou de outro e-mail)
 async function obterConviteValido(tokenConvite, email) {
   const convite = await repository.buscarConvitePorTokenHash(gerarHashToken(tokenConvite));
@@ -72,13 +81,14 @@ async function criarConvite(administradorId, email) {
     throw new AppError("Já existe um administrador com este e-mail.", 409);
   }
 
+  const tokenNonce = crypto.randomBytes(32).toString("base64url");
+  const token = gerarTokenConvite(tokenNonce);
   // Um único convite pendente por e-mail: gerar outro invalida o anterior
   await repository.removerConvitesPendentesPorEmail(emailNormalizado);
-
-  const token = crypto.randomBytes(24).toString("base64url");
   const convite = await repository.criarConvite({
     email: emailNormalizado,
     tokenHash: gerarHashToken(token),
+    tokenNonce,
     expiraEm: new Date(Date.now() + VALIDADE_CONVITE_MS),
     criadoPorId: administradorId
   });
@@ -92,11 +102,25 @@ async function criarConvite(administradorId, email) {
       "Use este token, com este mesmo e-mail, no cadastro de administrador. Ele vale por 48 horas e só pode ser usado uma vez."
   });
 
-  return { convite, token, enviado };
+  return { convite, enviado };
 }
 
 function listarConvites() {
   return repository.listarConvitesPendentes();
+}
+
+async function visualizarTokenConvite(principalId, id, senhaPrincipal) {
+  await validarSenhaPrincipal(principalId, senhaPrincipal);
+  const convite = await repository.buscarConvitePendente(id);
+  if (!convite) throw new AppError("Convite pendente não encontrado ou expirado.", 404);
+  if (!convite.tokenNonce) {
+    throw new AppError("Este convite antigo não permite visualizar o token. Gere um novo convite.", 409);
+  }
+  const token = gerarTokenConvite(convite.tokenNonce);
+  if (gerarHashToken(token) !== convite.tokenHash) {
+    throw new AppError("Não foi possível recuperar o token. Gere um novo convite.", 409);
+  }
+  return { token, email: convite.email };
 }
 
 async function revogarConvite(id) {
@@ -250,6 +274,7 @@ module.exports = {
   cadastrarAdministrador,
   criarConvite,
   listarConvites,
+  visualizarTokenConvite,
   revogarConvite,
   autenticarAdministrador,
   alterarSenhaPropria,

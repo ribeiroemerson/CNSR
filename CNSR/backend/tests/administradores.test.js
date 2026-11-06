@@ -27,6 +27,7 @@ describe("Administradores", () => {
   let tokenPrincipal;
   let tokenComum;
   let tokenConvite;
+  let conviteId;
 
   beforeAll(async () => {
     await prisma.administrador.create({
@@ -77,12 +78,42 @@ describe("Administradores", () => {
 
     expect(resposta.status).toBe(201);
     expect(resposta.body.email).toBe(dadosAdmin.email);
-    expect(typeof resposta.body.token).toBe("string");
+    expect(resposta.body).not.toHaveProperty("token");
     expect(resposta.body).not.toHaveProperty("tokenHash");
-    tokenConvite = resposta.body.token;
+    expect(resposta.body).not.toHaveProperty("tokenNonce");
+    conviteId = resposta.body.id;
+    const visualizacao = await request(app)
+      .post(`/api/administradores/convites/${conviteId}/token`)
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaPrincipal });
+    expect(visualizacao.status).toBe(200);
+    expect(visualizacao.headers["cache-control"]).toBe("no-store");
+    tokenConvite = visualizacao.body.token;
+    expect(typeof tokenConvite).toBe("string");
 
     const salvo = await prisma.conviteAdministrador.findFirst({ where: { email: dadosAdmin.email } });
     expect(salvo.tokenHash).not.toBe(tokenConvite);
+  });
+
+  it("deve exigir autenticação e senha do principal para visualizar o token", async () => {
+    const semAutenticacao = await request(app)
+      .post(`/api/administradores/convites/${conviteId}/token`)
+      .send({ senhaPrincipal });
+    expect(semAutenticacao.status).toBe(401);
+
+    const incorreta = await request(app)
+      .post(`/api/administradores/convites/${conviteId}/token`)
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaPrincipal: "incorreta" });
+    expect(incorreta.status).toBe(400);
+    expect(incorreta.body).not.toHaveProperty("token");
+
+    const repetida = await request(app)
+      .post(`/api/administradores/convites/${conviteId}/token`)
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaPrincipal });
+    expect(repetida.status).toBe(200);
+    expect(repetida.body.token).toBe(tokenConvite);
   });
 
   it("deve rejeitar o token usado com outro e-mail", async () => {
@@ -112,6 +143,16 @@ describe("Administradores", () => {
 
     const criado = await prisma.administrador.findUnique({ where: { usuario: usuarioReuso } });
     expect(criado).toBeNull();
+  });
+
+  it("deve impedir a visualização de convite consumido", async () => {
+    const resposta = await request(app)
+      .post(`/api/administradores/convites/${conviteId}/token`)
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaPrincipal });
+    expect(resposta.status).toBe(404);
+    const convite = await prisma.conviteAdministrador.findUnique({ where: { id: conviteId } });
+    expect(convite.tokenNonce).toBeNull();
   });
 
   it("deve autenticar com credenciais corretas e retornar um token", async () => {
@@ -241,14 +282,26 @@ describe("Administradores", () => {
       .send({ email: emailRevogado });
     expect(criado.status).toBe(201);
 
+    const visualizacao = await request(app)
+      .post(`/api/administradores/convites/${criado.body.id}/token`)
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaPrincipal });
+    expect(visualizacao.status).toBe(200);
+
     const removido = await request(app)
       .delete(`/api/administradores/convites/${criado.body.id}`)
       .set("Authorization", `Bearer ${tokenPrincipal}`);
     expect(removido.status).toBe(204);
 
+    const consultaRevogada = await request(app)
+      .post(`/api/administradores/convites/${criado.body.id}/token`)
+      .set("Authorization", `Bearer ${tokenPrincipal}`)
+      .send({ senhaPrincipal });
+    expect(consultaRevogada.status).toBe(404);
+
     const tentativa = await request(app)
       .post("/api/administradores")
-      .send({ ...dadosAdmin, email: emailRevogado, usuario: `rev${sufixo}`, tokenConvite: criado.body.token });
+      .send({ ...dadosAdmin, email: emailRevogado, usuario: `rev${sufixo}`, tokenConvite: visualizacao.body.token });
     expect(tentativa.status).toBe(403);
   });
 

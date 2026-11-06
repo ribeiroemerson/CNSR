@@ -515,7 +515,8 @@
       </form>
 
       <div id="conviteGeradoBox" class="hidden">
-        <p class="modal-desc">Copie agora: o token não será exibido novamente.</p>
+        <p class="modal-desc">Token do convite: compartilhe-o por um canal seguro.</p>
+        <p id="conviteGeradoEmail" class="modal-desc"></p>
         <div class="protocol-box invite-token" id="conviteGeradoToken"></div>
         <button type="button" class="btn btn-outline btn-full" onclick="copiarTokenConvite()">
           <i class="fa-solid fa-copy"></i> Copiar token
@@ -535,7 +536,7 @@
         </div>
       </form>
 
-      <button type="button" class="btn btn-secondary btn-full" onclick="fecharModal('modalConvitesAdmin')">Fechar</button>
+      <button type="button" class="btn btn-secondary btn-full" onclick="fecharModalConvites()">Fechar</button>
     </div>
   </div>
 

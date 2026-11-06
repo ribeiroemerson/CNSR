@@ -106,7 +106,7 @@ router.post("/", limitadorCadastro, validate(cadastrarAdministradorSchema), cont
  *                 format: email
  *     responses:
  *       201:
- *         description: Convite criado; o token é exibido uma única vez
+ *         description: Convite criado sem retornar o token
  *       403:
  *         description: Apenas o administrador principal pode convidar
  *       409:
@@ -119,6 +119,33 @@ router.post("/", limitadorCadastro, validate(cadastrarAdministradorSchema), cont
  *     responses:
  *       200:
  *         description: Convites pendentes e ainda válidos
+ * /administradores/convites/{id}/token:
+ *   post:
+ *     summary: Visualiza token de convite válido mediante confirmação da senha do principal
+ *     tags: [Administradores]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ConfirmarSenhaPrincipal'
+ *     responses:
+ *       200:
+ *         description: Token de convite
+ *       400:
+ *         description: Senha de confirmação inválida
+ *       404:
+ *         description: Convite inexistente, usado ou expirado
+ *       409:
+ *         description: Token não recuperável; gere um novo convite
  * /administradores/convites/{id}:
  *   delete:
  *     summary: Revoga um convite pendente (apenas administrador principal)
@@ -139,6 +166,7 @@ router.post("/", limitadorCadastro, validate(cadastrarAdministradorSchema), cont
  */
 router.post("/convites", autenticar, exigirAdministradorPrincipal, validate(criarConviteSchema), controller.criarConvite);
 router.get("/convites", autenticar, exigirAdministradorPrincipal, controller.listarConvites);
+router.post("/convites/:id/token", autenticar, exigirAdministradorPrincipal, limitadorConfirmacaoSenha, validate(confirmarSenhaPrincipalSchema), controller.visualizarTokenConvite);
 router.delete("/convites/:id", autenticar, exigirAdministradorPrincipal, controller.revogarConvite);
 
 /**

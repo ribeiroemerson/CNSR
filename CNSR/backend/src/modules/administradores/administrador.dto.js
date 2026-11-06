@@ -85,7 +85,8 @@ function paraSaidaConvite(convite) {
     id: convite.id,
     email: convite.email,
     expiraEm: convite.expiraEm,
-    criadoEm: convite.criadoEm
+    criadoEm: convite.criadoEm,
+    tokenDisponivel: Boolean(convite.tokenNonce)
   };
 }
 
